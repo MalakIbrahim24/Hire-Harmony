@@ -63,11 +63,12 @@ class AppRouter {
           builder: (_) => const LoginPage(),
           settings: settings,
         );
+        /*
       case AppRoutes.signUpPage:
         return MaterialPageRoute(
           builder: (_) => const SignUpPage(),
           settings: settings,
-        );
+        );*/
       // case AppRoutes.empSignupForm:
       //   return MaterialPageRoute(
       //     builder: (_) => const EmpSignupForm(),

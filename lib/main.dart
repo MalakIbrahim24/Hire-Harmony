@@ -45,6 +45,14 @@ void main() async {
  // await FirebaseApi().initNotifications();
 
   
+
+  runApp(ChangeNotifierProvider(
+    create: (context) => ThemeProvider(),
+    child: const MyApp(),
+  ));
+
+ // await FirebaseApi().initNotifications();
+
   runApp(ChangeNotifierProvider(
     create: (context) => ThemeProvider(),
     child: const MyApp(),

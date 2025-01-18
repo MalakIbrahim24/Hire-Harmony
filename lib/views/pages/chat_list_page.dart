@@ -30,16 +30,8 @@ class _ChatListPageState extends State<ChatListPage> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         backgroundColor: Theme.of(context).colorScheme.surface,
+        title: const Center(child: Text('Message')),
 
-        centerTitle: true,
-        title: Text(
-          'Messages',
-          textAlign: TextAlign.center,
-          style: GoogleFonts.montserratAlternates(
-            color: AppColors().navy,
-            fontSize: 20,
-          ),
-        ),
       ),
       body: _buildUserList(),
     );

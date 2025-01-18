@@ -25,11 +25,13 @@ class _EmpProfileInfoPageState extends State<EmpProfileInfoPage>
   String name = '';
   String location = '';
   String rating = '';
-  String aboutMe = '';
   String id = '';
-  List<String> services = [];
+  bool _isEditing = false;
+  String aboutMe = '';
+  final TextEditingController _aboutMeController = TextEditingController();
   num reviewsNum = 0;
   List<Map<String, dynamic>> reviews = [];
+  List<String> services = []; // Added missing services list
 
   @override
   void initState() {
@@ -44,54 +46,166 @@ class _EmpProfileInfoPageState extends State<EmpProfileInfoPage>
     super.dispose();
   }
 
-  Future<void> _fetchEmployeeData() async {
+  Future<void> _saveAboutMe() async {
     try {
-      final User? user = _auth.currentUser; // Get logged-in user
+      final User? user = _auth.currentUser;
       if (user == null) return;
 
-      // Fetch employee document
-      final DocumentSnapshot employeeDoc =
-          await _firestore.collection('users').doc(user.uid).get();
-
-      if (employeeDoc.exists) {
-        final data = employeeDoc.data() as Map<String, dynamic>;
-
-        setState(() {
-          profileImageUrl = data['img'] ??
-              'https://via.placeholder.com/150'; // Default placeholder
-          name = data['name'] ?? 'Unknown Name';
-          location = data['location'] ?? 'Unknown Location';
-          rating = data['rating'] ?? '0.0';
-          aboutMe = data['about'] ?? 'No description available.';
-          services = List<String>.from(data['services'] ?? []);
-          reviewsNum = data['reviews'] ?? 0;
-          id = data['uid'] ?? 'User ID not found';
-        });
-      }
-
-      // Fetch employee reviews
-      final QuerySnapshot reviewsSnapshot = await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('reviews')
-          .get();
+      await _firestore.collection('users').doc(user.uid).update({
+        'about': _aboutMeController.text,
+      });
 
       setState(() {
-        reviews = reviewsSnapshot.docs.map((doc) {
-          final reviewData = doc.data() as Map<String, dynamic>;
-          return {
-            'name': reviewData['name'] ?? 'Anonymous',
-            'rating': reviewData['rating'] ?? '0.0',
-            'date': reviewData['date'] ?? '',
-            'review': reviewData['review'] ?? 0,
-            'image': reviewData['image'] ??
-                'https://via.placeholder.com/50', // Default avatar
-          };
-        }).toList();
+        aboutMe = _aboutMeController.text;
+        _isEditing = false;
       });
     } catch (e) {
-      debugPrint('Error fetching employee data: $e');
+      debugPrint('Error saving "About Me": $e');
     }
+  }
+
+  Future<void> _saveServiceToFirestore(String serviceName) async {
+  try {
+    final User? user = _auth.currentUser;
+    if (user == null) {
+      debugPrint('User is not logged in');
+      return;
+    }
+
+    final DocumentReference userDoc = _firestore.collection('users').doc(user.uid);
+
+    await userDoc.update({
+      'services': FieldValue.arrayUnion([serviceName]),
+    });
+
+    setState(() {
+      services.add(serviceName);
+    });
+
+    debugPrint('Service added successfully');
+  } catch (e) {
+    debugPrint('Error adding service: $e');
+  }
+}
+
+Future<void> _deleteService(String serviceName) async {
+  try {
+    final User? user = _auth.currentUser;
+    if (user == null) {
+      debugPrint('User is not logged in');
+      return;
+    }
+
+    final DocumentReference userDoc = _firestore.collection('users').doc(user.uid);
+
+    await userDoc.update({
+      'services': FieldValue.arrayRemove([serviceName]),
+    });
+
+    setState(() {
+      services.remove(serviceName);
+    });
+
+    debugPrint('Service deleted successfully');
+  } catch (e) {
+    debugPrint('Error deleting service: $e');
+  }
+}
+
+Future<void> _fetchEmployeeData() async {
+  try {
+    final User? user = _auth.currentUser;
+    if (user == null) return;
+
+    final DocumentSnapshot employeeDoc =
+        await _firestore.collection('users').doc(user.uid).get();
+
+    if (employeeDoc.exists) {
+      final data = employeeDoc.data() as Map<String, dynamic>;
+
+      setState(() {
+        profileImageUrl = data['img'] ?? 'https://via.placeholder.com/150';
+        name = data['name'] ?? 'Unknown Name';
+        location = data['location'] ?? 'Unknown Location';
+        rating = data['rating'] ?? '0.0';
+        aboutMe = data['about'] ?? 'No description available.';
+        _aboutMeController.text = aboutMe;
+        reviewsNum = data['reviews'] ?? 0;
+        id = data['uid'] ?? 'User ID not found';
+        services = (data['services'] as List<dynamic>?)
+                ?.cast<String>() ??
+            []; // جلب قائمة الخدمات
+      });
+    }
+
+    final QuerySnapshot reviewsSnapshot = await _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('reviews')
+        .get();
+
+    setState(() {
+      reviews = reviewsSnapshot.docs.map((doc) {
+        final reviewData = doc.data() as Map<String, dynamic>;
+        return {
+          'name': reviewData['name'] ?? 'Anonymous',
+          'rating': reviewData['rating'] ?? '0.0',
+          'date': reviewData['date'] ?? '',
+          'review': reviewData['review'] ?? '',
+          'image': reviewData['image'] ??
+              'https://via.placeholder.com/50',
+        };
+      }).toList();
+    });
+  } catch (e) {
+    debugPrint('Error fetching employee data: $e');
+  }
+}
+
+
+  void _showAddServiceDialog(BuildContext context) {
+    final TextEditingController _serviceController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          title: Text('Add Service',
+              style: GoogleFonts.montserratAlternates(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.inversePrimary,
+              )),
+          content: TextField(
+            controller: _serviceController,
+            decoration: InputDecoration(
+              hintText: 'Enter service name',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                if (_serviceController.text.isNotEmpty) {
+                  _saveServiceToFirestore(_serviceController.text.trim());
+                  Navigator.of(context).pop();
+                }
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -99,12 +213,36 @@ class _EmpProfileInfoPageState extends State<EmpProfileInfoPage>
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        title: Text(
+          'Profile',
+          style: GoogleFonts.montserratAlternates(
+            color: Theme.of(context).colorScheme.inversePrimary,
+          ),
+        ),
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
+        centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.grey),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          IconButton(
+            icon: Icon(
+              _isEditing ? Icons.check : Icons.edit,
+              color: AppColors().orange,
+            ),
+            onPressed: () {
+              if (_isEditing) {
+                _saveAboutMe(); // حفظ التغييرات
+              } else {
+                setState(() {
+                  _isEditing = true; // تفعيل وضع التعديل
+                });
+              }
+            },
+          ),
+        ],
       ),
       body: Stack(
         children: [
@@ -145,7 +283,7 @@ class _EmpProfileInfoPageState extends State<EmpProfileInfoPage>
                           style: GoogleFonts.montserratAlternates(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
-                                    color: Theme.of(context).colorScheme.inversePrimary,
+                            color: Theme.of(context).colorScheme.inversePrimary,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -184,42 +322,96 @@ class _EmpProfileInfoPageState extends State<EmpProfileInfoPage>
                   Text(
                     'About me',
                     style: GoogleFonts.montserratAlternates(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.inversePrimary,),
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.inversePrimary,
+                    ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    aboutMe,
-                    style: GoogleFonts.montserratAlternates(
-                      fontSize: 14,
-                      color: Colors.grey,
+                  TextField(
+                    controller: _aboutMeController,
+                    enabled: _isEditing, // النص قابل للتعديل فقط في وضع التعديل
+                    maxLines: null,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: _isEditing
+                          ? Theme.of(context).colorScheme.primary
+                          : Colors.grey,
                     ),
                   ),
                   const SizedBox(height: 24),
 
                   // My Services
-                  Text(
-                    'My Services',
-                    style: GoogleFonts.montserratAlternates(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.inversePrimary,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'My Services',
+                            style: GoogleFonts.montserratAlternates(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color:
+                                  Theme.of(context).colorScheme.inversePrimary,
+                            ),
+                          ),
+                          if (_isEditing) // إظهار الزر فقط عند التعديل
+                            IconButton(
+                              icon: Icon(Icons.add, color: AppColors().orange),
+                              onPressed: () {
+                                _showAddServiceDialog(context);
+                              },
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: services
+                              .map((service) => Padding(
+                                    padding: const EdgeInsets.only(right: 8.0),
+                                    child: Stack(
+                                      alignment: Alignment
+                                          .topRight, // محاذاة زر "إكس" في الزاوية
+                                      children: [
+                                        buildStaticButton(service),
+                                        if (_isEditing) // إظهار زر "إكس" فقط عند التعديل
+                                          Positioned(
+                                            top: -4, // التحكم بمكان الأيقونة
+                                            right: -4,
+                                            child: GestureDetector(
+                                              onTap: () {
+                                                _deleteService(
+                                                    service); // حذف الخدمة
+                                              },
+                                              child: Container(
+                                                decoration: BoxDecoration(
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .surface
+                                                      .withValues(alpha: 0.8),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: Icon(
+                                                  Icons.close,
+                                                  color: AppColors().orange,
+                                                  size: 16,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ))
+                              .toList(),
+                        ),
+                      ),
+                    ],
+                  ),
 
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: services
-                          .map((service) => Padding(
-                                padding: const EdgeInsets.only(right: 8.0),
-                                child: buildStaticButton(service),
-                              ))
-                          .toList(),
-                    ),
-                  ),
                   const SizedBox(height: 24),
 
                   // Tabs Section
