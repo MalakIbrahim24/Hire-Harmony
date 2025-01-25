@@ -6,7 +6,8 @@ class ChatPage extends StatefulWidget {
   final String reciverEmail;
 
   const ChatPage({
-    super.key, required this.reciverEmail,
+    super.key,
+    required this.reciverEmail,
   });
 
   @override
@@ -40,7 +41,6 @@ class _ChatPageState extends State<ChatPage> {
                       }
                       return ListView.builder(
                           itemCount: state.messages.length,
-                          
                           itemBuilder: (context, index) {
                             final message = state.messages[index];
 
@@ -49,17 +49,17 @@ class _ChatPageState extends State<ChatPage> {
                                 backgroundImage: NetworkImage(
                                   message.senderPhotoUrl!,
                                 ),
-                              radius: 40,
+                                radius: 40,
                               ),
                               title: Text(message.message),
                               subtitle: Text(message.senderName),
                             );
                           });
                     } else if (state is ChatFailure) {
-                      return  Center(
+                      return Center(
                         child: Text(state.message),
                       );
-                    }else {
+                    } else {
                       return const Center(
                         child: CircularProgressIndicator(),
                       );
@@ -72,35 +72,30 @@ class _ChatPageState extends State<ChatPage> {
                 decoration: InputDecoration(
                   border: const OutlineInputBorder(),
                   hintText: 'Type a message',
-                  suffixIcon: BlocConsumer<ChatCubit,ChatState>(
-                    bloc: cubit,
-                    listener: (context, state) {
-                      if(state is ChatMessageSent){
-                        _messageController.clear();
-                      }
-                    },
-                    listenWhen: (previous, current) => 
-                    current is ChatMessageSent ,
-                    buildWhen: (previous, current) => current is ChatMessageSending||current is ChatMessageSent,
+                  suffixIcon: BlocConsumer<ChatCubit, ChatState>(
+                      bloc: cubit,
+                      listener: (context, state) {
+                        if (state is ChatMessageSent) {
+                          _messageController.clear();
+                        }
+                      },
+                      listenWhen: (previous, current) =>
+                          current is ChatMessageSent,
+                      buildWhen: (previous, current) =>
+                          current is ChatMessageSending ||
+                          current is ChatMessageSent,
+                      builder: (context, state) {
+                        if (state is ChatMessageSending) {
+                          return const CircularProgressIndicator();
+                        }
 
-                  
-                    builder: (context,state) {
-                      if (state is ChatMessageSending) {
-                        return const CircularProgressIndicator();
-                      }
-
-                      return IconButton(
-                       icon: const Icon(Icons.send),
-
-                        onPressed: () async {
-                          await cubit.sendMessage(_messageController.text);
-
-                          }, 
-                        
-                        
-                      );
-                    }
-                  ),
+                        return IconButton(
+                          icon: const Icon(Icons.send),
+                          onPressed: () async {
+                            await cubit.sendMessage(_messageController.text);
+                          },
+                        );
+                      }),
                 ),
               ),
             ],

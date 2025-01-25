@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.hire_harmony"
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         applicationId "com.example.hire_harmony"

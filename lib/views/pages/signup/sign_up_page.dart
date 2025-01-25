@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:drop_down_list/drop_down_list.dart';
+import 'package:drop_down_list/model/selected_list_item.dart';
 import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -20,11 +22,34 @@ class _SignUpPageState extends State<SignUpPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+
   late String role;
   bool _isVisible = false;
   bool _isVisible2 = false;
+  List<SelectedListItem<String>> categoryItems = [];
+  List<SelectedListItem<String>> selectedCategoryItems = [];
 
   final AuthServices authServices = AuthServicesImpl();
+  @override
+  void initState() {
+    super.initState();
+    fetchCategories();
+  }
+
+  Future<void> fetchCategories() async {
+    final querySnapshot =
+        await FirebaseFirestore.instance.collection('categories').get();
+
+    final categories = querySnapshot.docs.map((doc) {
+      return SelectedListItem<String>(
+        data: doc['name'] as String,
+      );
+    }).toList();
+
+    setState(() {
+      categoryItems = categories;
+    });
+  }
 
   String? validateUserName(String value) {
     String pattern = r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$';
@@ -339,50 +364,148 @@ class _SignUpPageState extends State<SignUpPage> {
                                   return null;
                                 },
                               ),
+                              const SizedBox(
+                                height: 30,
+                              ),
+                              // Multi-select dropdown for employee categories
+                              if (role == 'employee') ...[
+                                const SizedBox(height: 30),
+                                Text(
+                                  'Select Categories',
+                                  style: GoogleFonts.montserratAlternates(
+                                    fontSize: 15,
+                                    color: AppColors().navy,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                SizedBox(
+                                  width: double
+                                      .infinity, // Match full width like TextFormField
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                      // Clear selected items explicitly before opening the modal
+                                      setState(() {
+                                        selectedCategoryItems.clear();
+                                      });
+
+                                      // Show the DropDown modal
+                                      DropDownState<String>(
+                                        dropDown: DropDown<String>(
+                                          isDismissible: true,
+                                          bottomSheetTitle: const Text(
+                                            'Select Categories',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 20.0,
+                                            ),
+                                          ),
+                                          submitButtonText: 'Save',
+                                          clearButtonText: 'Clear',
+                                          data: categoryItems,
+                                          onSelected:
+                                              (List<SelectedListItem<String>>
+                                                  selectedItems) {
+                                            setState(() {
+                                              selectedCategoryItems =
+                                                  selectedItems;
+                                            });
+                                          },
+                                          enableMultipleSelection: true,
+                                        ),
+                                      ).showModal(context);
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors().navy,
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical:
+                                              12.0), // Adjust vertical padding
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(
+                                            10), // Match borderRadius to TextField
+                                      ),
+                                    ),
+                                    child: Text(
+                                      selectedCategoryItems.isEmpty
+                                          ? 'Choose Categories'
+                                          : selectedCategoryItems
+                                              .map((e) => e.data)
+                                              .join(', '),
+                                      style: GoogleFonts.montserratAlternates(
+                                        fontSize: 14,
+                                        color: AppColors().white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+
+// Inside your form
+
                               const SizedBox(height: 80),
                               MainButton(
                                 text: "Next",
                                 onPressed: () {
-                                  if (_formKey.currentState!.validate()) {
-                                    if (role == 'employee') {
-                                      // Navigate to EmpIdVerificationPage for employees
-                                      print('Name: ${_nameController.text}');
-                                      print('Email: ${_emailController.text}');
-                                      print(
-                                          'Password: ${_passwordController.text}');
+                                  if (!_formKey.currentState!.validate()) {
+                                    // Check if all form fields are valid
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text(
+                                              'Please fill in all fields correctly!')),
+                                    );
+                                    return;
+                                  }
 
-                                      Navigator.pushNamed(
-                                        context,
-                                        AppRoutes
-                                            .empidverificationPage, // Replace with your actual route name
-                                        arguments: {
-                                          'name': _nameController.text,
-                                          'email': _emailController.text,
-                                          'password': _passwordController.text,
-                                          'role' : role,
-                                        },
+                                  if (role == 'employee') {
+                                    // Additional check for employee
+                                    if (selectedCategoryItems.isEmpty) {
+                                      // Show error if no categories are selected
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          backgroundColor: AppColors().red,
+                                          content: Text(
+                                            textAlign: TextAlign.center,
+                                            'Please select at least one category!',
+                                            style: GoogleFonts
+                                                .montserratAlternates(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 15,
+                                              color: AppColors().white,
+                                            ),
+                                          ),
+                                        ),
                                       );
+                                      return;
+                                    }
 
-                                      print(
-                                          'Navigating to EmpIdVerificationPage with arguments: ${{
+                                    // Navigate to EmpIdVerificationPage for employees
+                                    Navigator.pushNamed(
+                                      context,
+                                      AppRoutes
+                                          .empidverificationPage, // Replace with your actual route name
+                                      arguments: {
                                         'name': _nameController.text,
                                         'email': _emailController.text,
                                         'password': _passwordController.text,
                                         'role': role,
-                                      }}');
-                                    } else {
-                                      // Navigate to PhonePage for customers
-                                      Navigator.pushNamed(
-                                        context,
-                                        AppRoutes.phonePage,
-                                        arguments: {
-                                          'name': _nameController.text,
-                                          'email': _emailController.text,
-                                          'password': _passwordController.text,
-                                          'role': role,
-                                        },
-                                      );
-                                    }
+                                        'categories': selectedCategoryItems
+                                            .map((item) => item.data)
+                                            .toList(),
+                                      },
+                                    );
+                                  } else {
+                                    // Navigate to PhonePage for non-employees
+                                    Navigator.pushNamed(
+                                      context,
+                                      AppRoutes.phonePage,
+                                      arguments: {
+                                        'name': _nameController.text,
+                                        'email': _emailController.text,
+                                        'password': _passwordController.text,
+                                        'role': role,
+                                        'categories': selectedCategoryItems,
+                                      },
+                                    );
                                   }
                                 },
                               ),

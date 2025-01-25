@@ -53,7 +53,6 @@ class _FavoritesPageState extends State<FavoritesPage> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        automaticallyImplyLeading: false,
         centerTitle: true, // Center the title
         title: Text(
           'Favorites',

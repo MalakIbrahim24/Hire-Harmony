@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hire_harmony/utils/app_colors.dart';
 import 'package:hire_harmony/views/pages/chat_list_page.dart';
+import 'package:hire_harmony/views/pages/customer/community.dart';
 import 'package:hire_harmony/views/pages/customer/cus_home_page.dart';
 import 'package:hire_harmony/views/pages/customer/cus_profile_page.dart';
-import 'package:hire_harmony/views/pages/customer/favorites_page.dart';
 import 'package:hire_harmony/views/pages/customer/order_page.dart';
 
 class CustomButtomNavbar extends StatefulWidget {
@@ -23,42 +23,6 @@ class _CustomButtomNavbarState extends State<CustomButtomNavbar> {
 
     return Scaffold(
       extendBody: true,
-      drawer: Drawer(
-        width: 330,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 16),
-            Container(
-              width: 400,
-              height: 200,
-              decoration: const BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage('lib/assets/images/office2.jpg'),
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.account_circle_outlined,
-                    color: AppColors().navy, size: 30),
-                const SizedBox(width: 8),
-                Text(
-                  'Good Afternoon, Haneen',
-                  style: GoogleFonts.montserratAlternates(
-                    fontSize: 18,
-                    color: AppColors().navy,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
       bottomNavigationBar: size.width >= 800
           ? null
           : NavigationBarTheme(
@@ -114,14 +78,14 @@ class _CustomButtomNavbarState extends State<CustomButtomNavbar> {
                   ),
                   NavigationDestination(
                     selectedIcon: Icon(
-                      Icons.favorite,
+                      Icons.living,
                       color: AppColors().white,
                     ),
                     icon: Icon(
-                      Icons.favorite_border,
+                      Icons.living_outlined,
                       color: AppColors().navy,
                     ),
-                    label: 'Favorite',
+                    label: 'Community',
                   ),
                   NavigationDestination(
                     selectedIcon: Icon(
@@ -150,7 +114,7 @@ class _CustomButtomNavbarState extends State<CustomButtomNavbar> {
         const ChatListPage(),
         const OrderPage(),
         const CusHomePage(),
-        const FavoritesPage(),
+        const Community(),
         const CusProfilePage(),
       ][currentPageIndex],
     );

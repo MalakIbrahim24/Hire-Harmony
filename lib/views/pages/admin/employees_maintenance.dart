@@ -3,23 +3,21 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hire_harmony/utils/app_colors.dart';
 
-class NewAccountsRequestsPage extends StatefulWidget {
-  const NewAccountsRequestsPage({super.key});
+class EmployeesMaintenance extends StatefulWidget {
+  const EmployeesMaintenance({super.key});
 
   @override
-  State<NewAccountsRequestsPage> createState() =>
-      _NewAccountsRequestsPageState();
+  State<EmployeesMaintenance> createState() => _NewAccountsRequestsPageState();
 }
 
-class _NewAccountsRequestsPageState extends State<NewAccountsRequestsPage> {
+class _NewAccountsRequestsPageState extends State<EmployeesMaintenance> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Stream to fetch users with role "employee" and state "pending"
+  // Stream to fetch users with role "employee" and state "accepted"
   Stream<QuerySnapshot> _fetchPendingEmployees() {
     return _firestore
         .collection('users')
         .where('role', isEqualTo: 'employee')
-        .where('state', isEqualTo: 'pending')
         .snapshots();
   }
 
@@ -27,7 +25,13 @@ class _NewAccountsRequestsPageState extends State<NewAccountsRequestsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Pending Employee Requests"),
+        title: Text(
+          "Employee Maintenance",
+          style: GoogleFonts.montserratAlternates(
+            color: AppColors().white,
+            fontSize: 15,
+          ),
+        ),
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: _fetchPendingEmployees(),
@@ -46,7 +50,7 @@ class _NewAccountsRequestsPageState extends State<NewAccountsRequestsPage> {
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(
-              child: Text("No pending employee requests."),
+              child: Text("No registered employees."),
             );
           }
 
@@ -64,7 +68,25 @@ class _NewAccountsRequestsPageState extends State<NewAccountsRequestsPage> {
                     backgroundImage: NetworkImage(user['img']),
                   ),
                   title: Text(user['name']),
-                  subtitle: Text(user['email']),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(user['email']),
+                      if (user['similarity'] != null)
+                        Text(
+                          'Similarity: ${double.tryParse(user['similarity'].toString())?.toStringAsFixed(3) ?? '0.000'}%',
+                          style: TextStyle(
+                            color: (double.tryParse(
+                                            user['similarity'].toString()) ??
+                                        0) <
+                                    80
+                                ? AppColors().orange
+                                : AppColors().green,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                    ],
+                  ),
                   trailing: SizedBox(
                     width: 100, // Set the desired width of the button
                     child: ElevatedButton(
@@ -78,20 +100,18 @@ class _NewAccountsRequestsPageState extends State<NewAccountsRequestsPage> {
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            AppColors().navy, // Set the button color to blue
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 8), // Adjust vertical padding
+                        backgroundColor: AppColors().navy,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                              8), // Optional: Add rounded corners
+                          borderRadius: BorderRadius.circular(8),
                         ),
                       ),
                       child: Text(
-                        "View Request",
+                        "View employee",
+                        textAlign: TextAlign.center,
                         style: GoogleFonts.montserratAlternates(
                           fontSize: 12,
-                          color: Colors.white, // Text color
+                          color: Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -108,29 +128,49 @@ class _NewAccountsRequestsPageState extends State<NewAccountsRequestsPage> {
 }
 
 // EndorseEmployeePage for detailed view
-class EndorseEmployeePage extends StatelessWidget {
+class EndorseEmployeePage extends StatefulWidget {
   final DocumentSnapshot user;
 
   const EndorseEmployeePage({super.key, required this.user});
 
-  Future<void> _approveEmployee(BuildContext context) async {
-    
+  @override
+  State<EndorseEmployeePage> createState() => _EndorseEmployeePageState();
+}
+
+class _EndorseEmployeePageState extends State<EndorseEmployeePage> {
+  late String currentState;
+
+  @override
+  void initState() {
+    super.initState();
+    currentState = widget.user['state']; // Initialize the state from Firestore
+  }
+
+  Future<void> _toggleEmployeeState(BuildContext context) async {
     try {
+      final newState = currentState == 'accepted' ? 'pending' : 'accepted';
+
       await FirebaseFirestore.instance
           .collection('users')
-          .doc(user.id) // Use document ID to locate the user
-          .update({'state': 'approved'}); // Update state to approved
-      // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Employee approved successfully!")),
-      );
+          .doc(widget.user.id) // Use document ID to locate the user
+          .update({'state': newState}); // Toggle the state
 
-      // ignore: use_build_context_synchronously
-      Navigator.pop(context); // Go back to the previous page
-    } catch (e) {
-      // ignore: use_build_context_synchronously
+      setState(() {
+        currentState = newState; // Update the local state
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error approving employee: $e")),
+        SnackBar(
+          content: Text(
+            currentState == 'pending'
+                ? "Employee suspended for now!"
+                : "Employee reinstated successfully!",
+          ),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error updating employee state: $e")),
       );
     }
   }
@@ -139,7 +179,7 @@ class EndorseEmployeePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(user['name']),
+        title: Text(widget.user['name']),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -151,27 +191,27 @@ class EndorseEmployeePage extends StatelessWidget {
                 Center(
                   child: CircleAvatar(
                     radius: 50,
-                    backgroundImage: NetworkImage(user['img']),
+                    backgroundImage: NetworkImage(widget.user['img']),
                   ),
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  "Name: ${user['name']}",
+                  "Name: ${widget.user['name']}",
                   style: const TextStyle(fontSize: 18),
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  "Email: ${user['email']}",
+                  "Email: ${widget.user['email']}",
                   style: const TextStyle(fontSize: 18),
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  "Phone: ${user['phone']}",
+                  "Phone: ${widget.user['phone']}",
                   style: const TextStyle(fontSize: 18),
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  "Role: ${user['role']}",
+                  "Role: ${widget.user['role']}",
                   style: const TextStyle(fontSize: 18),
                 ),
                 const SizedBox(height: 20),
@@ -182,7 +222,7 @@ class EndorseEmployeePage extends StatelessWidget {
                 const SizedBox(height: 10),
                 Center(
                   child: Image.network(
-                    user['selfieImageUrl'], // Fetch selfie image URL
+                    widget.user['selfieImageUrl'], // Fetch selfie image URL
                     height: 200,
                   ),
                 ),
@@ -194,7 +234,7 @@ class EndorseEmployeePage extends StatelessWidget {
                 const SizedBox(height: 10),
                 Center(
                   child: Image.network(
-                    user['idImageUrl'], // Fetch ID image URL
+                    widget.user['idImageUrl'], // Fetch ID image URL
                     height: 200,
                   ),
                 ),
@@ -203,17 +243,19 @@ class EndorseEmployeePage extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     ElevatedButton(
-                      onPressed: () => _approveEmployee(context),
-                      child: const Text("Approve"),
-                    ),
-                    ElevatedButton(
                       onPressed: () {
-                        // Handle reject logic here
+                        _toggleEmployeeState(context); // Toggle state
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
+                        backgroundColor: AppColors().navy,
                       ),
-                      child: const Text("Reject"),
+                      child: Text(
+                        currentState == 'accepted' ? "Defer" : "Unlock",
+                        style: GoogleFonts.montserratAlternates(
+                          color: AppColors().white,
+                          fontSize: 15,
+                        ),
+                      ),
                     ),
                   ],
                 ),

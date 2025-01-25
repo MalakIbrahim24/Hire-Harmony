@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hire_harmony/services/auth_services.dart';
 import 'package:hire_harmony/services/chat/chat_services.dart';
+import 'package:hire_harmony/utils/app_colors.dart';
 import 'package:hire_harmony/views/pages/chatePage.dart';
 
 class ChatListPage extends StatefulWidget {
@@ -26,10 +28,18 @@ class _ChatListPageState extends State<ChatListPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: Theme.of(context).colorScheme.surface,
-        title: const Center(child: Text('Message')),
-          automaticallyImplyLeading: false,
 
+        centerTitle: true,
+        title: Text(
+          'Messages',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.montserratAlternates(
+            color: AppColors().navy,
+            fontSize: 20,
+          ),
+        ),
       ),
       body: _buildUserList(),
     );

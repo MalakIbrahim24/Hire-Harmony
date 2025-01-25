@@ -1,4 +1,4 @@
-/*import 'dart:io';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -56,7 +56,8 @@ class _EmpIdVerificationPageState extends State<EmpIdVerificationPage> {
   }
 
   // Function to navigate to PhonePage
-  Future<void> _navigateToPhonePage(Map<String, String> userData) async {
+  Future<void> _navigateToPhonePage(
+      Map<String, String> userData, List<String> categories) async {
     if (idImage == null || selfieImage == null) return;
 
     setState(() {
@@ -84,10 +85,17 @@ class _EmpIdVerificationPageState extends State<EmpIdVerificationPage> {
         var similarity = matchedFaces.matchedFaces[0].similarity * 100;
 
         if (similarity > 75) {
+          if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
+                backgroundColor: AppColors().green,
                 content: Text(
-                    'Match Successful! Similarity: ${similarity.toStringAsFixed(2)}%')),
+                  'Match Successful! Similarity: ${similarity.toStringAsFixed(2)}%',
+                  style: GoogleFonts.montserratAlternates(
+                    color: AppColors().white,
+                    fontSize: 15,
+                  ),
+                )),
           );
 
           // Navigate to the next page
@@ -98,22 +106,50 @@ class _EmpIdVerificationPageState extends State<EmpIdVerificationPage> {
             'idImage': idImage!,
             'selfieImage': selfieImage!,
             'role': 'employee',
+            'similarity': similarity,
+            'categories': categories,
           });
         } else {
+          if (!mounted) return;
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
+                backgroundColor: AppColors().red,
                 content: Text(
-                    'Match Failed! Similarity: ${similarity.toStringAsFixed(2)}%')),
+                  'Match Failed! Similarity: ${similarity.toStringAsFixed(2)}%',
+                  style: GoogleFonts.montserratAlternates(
+                    color: AppColors().white,
+                    fontSize: 15,
+                  ),
+                )),
           );
         }
       } else {
+        if (!mounted) return;
+
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No match found.')),
+          SnackBar(
+              backgroundColor: AppColors().red,
+              content: Text(
+                'No match found.',
+                style: GoogleFonts.montserratAlternates(
+                  color: AppColors().white,
+                  fontSize: 15,
+                ),
+              )),
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error during face matching: $e')),
+        SnackBar(
+            backgroundColor: AppColors().red,
+            content: Text(
+              'Error during face matching: $e',
+              style: GoogleFonts.montserratAlternates(
+                color: AppColors().white,
+                fontSize: 15,
+              ),
+            )),
       );
     } finally {
       setState(() {
@@ -125,8 +161,11 @@ class _EmpIdVerificationPageState extends State<EmpIdVerificationPage> {
   @override
   Widget build(BuildContext context) {
     // Retrieve arguments passed from SignUpPage
-    final Map<String, String>? formData =
-        ModalRoute.of(context)?.settings.arguments as Map<String, String>?;
+    final Map<String, dynamic>? formData =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+
+    final List<String> categories =
+        (formData?['categories'] as List<dynamic>?)?.cast<String>() ?? [];
 
     if (formData == null) {
       return const Center(
@@ -246,7 +285,13 @@ class _EmpIdVerificationPageState extends State<EmpIdVerificationPage> {
                   ),
                   onPressed:
                       (idImage != null && selfieImage != null && !isProcessing)
-                          ? () => _navigateToPhonePage(formData)
+                          ? () => _navigateToPhonePage(
+                                formData.map((key, value) => MapEntry(
+                                    key,
+                                    value
+                                        .toString())), // Convert to Map<String, String>
+                                categories,
+                              )
                           : null,
                   child: isProcessing
                       ? const CircularProgressIndicator()
@@ -267,4 +312,3 @@ class _EmpIdVerificationPageState extends State<EmpIdVerificationPage> {
     );
   }
 }
-*/

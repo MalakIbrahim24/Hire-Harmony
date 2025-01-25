@@ -46,7 +46,7 @@ class AppRoutes {
   static const String categoryManagementPage = '/category-management-page';
   static const String editedServicesPage = '/edited-services-page';
   static const String deletedAccounts = '/deleted-accounts';
-  static const String newaccountsrequestsPage = '/new-accounts-requests-page';
+  static const String employeesmaintenance = '/new-accounts-requests-page';
 
   // static const String servicesManagementForm = '/services-management-form';
 }

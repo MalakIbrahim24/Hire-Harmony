@@ -15,7 +15,7 @@ import 'package:hire_harmony/views/pages/admin/category_management_page.dart';
 import 'package:hire_harmony/views/pages/admin/deleted_acounts.dart';
 import 'package:hire_harmony/views/pages/admin/edit_services_page.dart';
 import 'package:hire_harmony/views/pages/admin/edited_services_page.dart';
-import 'package:hire_harmony/views/pages/admin/new_accounts_requests_page.dart';
+import 'package:hire_harmony/views/pages/admin/employees_maintenance.dart';
 import 'package:hire_harmony/views/pages/admin/user_management_page.dart';
 import 'package:hire_harmony/views/pages/chat_page.dart';
 import 'package:hire_harmony/views/pages/customer/account_deletion_page.dart';
@@ -205,9 +205,9 @@ class AppRouter {
           builder: (_) => const SignUpChoice(),
           settings: settings,
         );
-        case AppRoutes.newaccountsrequestsPage:
+        case AppRoutes.employeesmaintenance:
         return MaterialPageRoute(
-          builder: (_) => const NewAccountsRequestsPage(),
+          builder: (_) => const EmployeesMaintenance(),
           settings: settings,
         );
       case AppRoutes.adnsettingsPage:

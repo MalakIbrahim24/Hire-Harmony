@@ -44,10 +44,9 @@ class CusHomePage extends StatelessWidget {
         title: Column(
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  Icons.location_city,
+                  Icons.location_on,
                   color: AppColors().white,
                 ),
                 Text('Qalqiliya , palestine',

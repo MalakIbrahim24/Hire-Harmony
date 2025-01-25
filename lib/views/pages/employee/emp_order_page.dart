@@ -1,9 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hire_harmony/services/firestore_services.dart';
 import 'package:hire_harmony/utils/app_colors.dart';
-import 'package:hire_harmony/views/widgets/customer/order_tile.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 
@@ -35,6 +33,7 @@ class EmpOrderPage extends StatelessWidget {
         backgroundColor: Theme.of(context).colorScheme.surface,
         appBar: AppBar(
           backgroundColor: Theme.of(context).colorScheme.surface,
+          automaticallyImplyLeading: false,
           elevation: 0,
           centerTitle: true,
           title: Text(
@@ -63,6 +62,7 @@ class EmpOrderPage extends StatelessWidget {
           return Scaffold(
             appBar: AppBar(
           backgroundColor: Theme.of(context).colorScheme.surface,
+              automaticallyImplyLeading: false,
             ),
             extendBodyBehindAppBar: true,
             body: Center(
@@ -81,6 +81,7 @@ class EmpOrderPage extends StatelessWidget {
           return Scaffold(
             appBar: AppBar(
               backgroundColor: AppColors().transparent,
+              automaticallyImplyLeading: false,
             ),
             extendBodyBehindAppBar: true,
             body: Center(
@@ -104,12 +105,9 @@ class EmpOrderPage extends StatelessWidget {
             extendBodyBehindAppBar: true,
             body: Stack(
               children: [
-                // Semi-transparent dark overlay
-
                 Container(
                   color: Colors.black.withValues(alpha: 0.35), // Dark overlay
                 ),
-                // Lock icon and text in the center
                 Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -119,22 +117,22 @@ class EmpOrderPage extends StatelessWidget {
                         size: 70,
                         color: AppColors().white,
                       ),
-                      const SizedBox(
-                        height: 80,
-                      ),
+                      const SizedBox(height: 16),
                       Text(
-                        'Orders are locked for now',
+                        textAlign: TextAlign.center,
+                        'Orders are locked for now, we are checking your information',
                         style: GoogleFonts.montserratAlternates(
                           fontSize: 20,
                           color: AppColors().white,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
+                      const SizedBox(height: 8),
                       Text(
                         'Please wait until we verify your identity.',
                         style: GoogleFonts.montserratAlternates(
                           fontSize: 16,
-                          color: Colors.white, // White text for contrast
+                          color: Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
                         textAlign: TextAlign.center,
@@ -147,19 +145,18 @@ class EmpOrderPage extends StatelessWidget {
           );
         }
 
-        final Stream<List<Map<String, dynamic>>> ordersStream =
-            FirestoreService.instance.collectionStream(
-          path: 'users/$loggedInUserId/orders',
-          builder: (data, documentId) => {
-            ...data,
-            'orderID': documentId,
-          },
-        );
+        // Stream for orders collection
+        final Stream<QuerySnapshot> ordersStream = FirebaseFirestore.instance
+            .collection('users')
+            .doc(loggedInUserId)
+            .collection('orders')
+            .snapshots();
 
         return Scaffold(
           backgroundColor: Theme.of(context).colorScheme.surface,
           appBar: AppBar(
             backgroundColor: Theme.of(context).colorScheme.surface,
+            automaticallyImplyLeading: false,
             elevation: 0,
             centerTitle: true,
             title: Text(
@@ -171,14 +168,27 @@ class EmpOrderPage extends StatelessWidget {
               ),
             ),
           ),
-          body: StreamBuilder<List<Map<String, dynamic>>>(
+          body: StreamBuilder<QuerySnapshot>(
             stream: ordersStream,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               }
 
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              if (snapshot.hasError) {
+                return Center(
+                  child: Text(
+                    'Error fetching orders. Please try again later.',
+                    style: GoogleFonts.montserratAlternates(
+                      fontSize: 16,
+                      color: AppColors().navy,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                );
+              }
+
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                 return Center(
                   child: Text(
                     'No orders found.',
@@ -191,28 +201,50 @@ class EmpOrderPage extends StatelessWidget {
                 );
               }
 
-              final orders = snapshot.data!;
+              final orders = snapshot.data!.docs;
 
               return ListView.builder(
                 padding: const EdgeInsets.all(10),
                 itemCount: orders.length,
                 itemBuilder: (context, index) {
-                  final order = orders[index];
-                  final sentTime = order['sentTime'] as Timestamp;
-                  final formattedTime =
-                      DateFormat.jm().format(sentTime.toDate());
-                  final formattedDate =
-                      DateFormat.yMMMMd().format(sentTime.toDate());
+                  final order = orders[index].data() as Map<String, dynamic>;
 
-                  return OrderTile(
-                    title: order['name'] as String? ?? 'No Title',
-                    subtitle:
-                        'Order ID: ${order['orderID'] as String? ?? 'N/A'}',
-                    status: order['status'] as String? ?? 'Unknown',
-                    statusColor:
-                        _getStatusColor(order['status'] as String? ?? ''),
-                    sentTime: formattedTime,
-                    sentDate: formattedDate,
+                  // Safely fetch fields with null checks
+                  final sentTime = order['confirmedTime'] as Timestamp?;
+                  final formattedTime = sentTime != null
+                      ? DateFormat.jm().format(sentTime.toDate())
+                      : 'Unknown Time';
+                  final formattedDate = sentTime != null
+                      ? DateFormat.yMMMMd().format(sentTime.toDate())
+                      : 'Unknown Date';
+
+                  final orderName = order['name'] as String? ?? 'No Title';
+                  final orderID = order['orderId'] as String? ?? 'N/A';
+                  final status = order['status'] as String? ?? 'Unknown';
+
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundImage: NetworkImage(
+                          order['img'] ?? 'https://via.placeholder.com/150',
+                        ),
+                      ),
+                      title: Text(
+                        orderName,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text('Order ID: $orderID\n'
+                          'Sent on: $formattedDate at $formattedTime'),
+                      trailing: Icon(
+                        Icons.circle,
+                        color: _getStatusColor(status),
+                        size: 12,
+                      ),
+                    ),
                   );
                 },
               );
@@ -225,9 +257,9 @@ class EmpOrderPage extends StatelessWidget {
 
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
-      case 'pending':
+      case 'in progress':
         return AppColors().orange;
-      case 'confirmed':
+      case 'completed':
         return AppColors().green;
       case 'assigned':
         return AppColors().navy2;

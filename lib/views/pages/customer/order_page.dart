@@ -1,11 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hire_harmony/services/firestore_services.dart';
-import 'package:hire_harmony/utils/app_colors.dart';
-import 'package:hire_harmony/views/widgets/customer/order_tile.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:hire_harmony/utils/app_colors.dart';
 
 class OrderPage extends StatefulWidget {
   const OrderPage({super.key});
@@ -32,13 +30,13 @@ class _OrderPageState extends State<OrderPage>
 
   @override
   Widget build(BuildContext context) {
-    // Fetch the current user's UID
     final String? loggedInUserId = FirebaseAuth.instance.currentUser?.uid;
 
     if (loggedInUserId == null) {
       return Scaffold(
         backgroundColor: AppColors().orange,
         appBar: AppBar(
+          automaticallyImplyLeading: false,
           backgroundColor: Colors.white,
           elevation: 0,
           centerTitle: true,
@@ -53,24 +51,25 @@ class _OrderPageState extends State<OrderPage>
       );
     }
 
-    // Reference to the 'orders' and 'pendingRequests' subcollections
-    final Stream<List<Map<String, dynamic>>> ordersStream =
-        FirestoreService.instance.collectionStream(
-      path: 'users/$loggedInUserId/orders',
-      builder: (data, documentId) => {
-        ...data,
-        'orderID': documentId, // Include the document ID as orderID
-      },
-    );
-
     final Stream<List<Map<String, dynamic>>> pendingRequestsStream =
-        FirestoreService.instance.collectionStream(
-      path: 'users/$loggedInUserId/sentRequests',
-      builder: (data, documentId) => {
-        ...data,
-        'requestID': documentId, // Include the document ID as requestID
-      },
-    );
+        FirebaseFirestore.instance
+            .collection('users')
+            .doc(loggedInUserId)
+            .collection('sentRequests')
+            .snapshots()
+            .map((snapshot) => snapshot.docs
+                .map((doc) => {...doc.data(), 'id': doc.id})
+                .toList());
+
+    final Stream<List<Map<String, dynamic>>> ordersStream = FirebaseFirestore
+        .instance
+        .collection('users')
+        .doc(loggedInUserId)
+        .collection('orders')
+        .where('status', isEqualTo: 'in progress')
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => {...doc.data(), 'id': doc.id}).toList());
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -107,93 +106,7 @@ class _OrderPageState extends State<OrderPage>
     );
   }
 
-  Widget _buildOrdersTab(Stream<List<Map<String, dynamic>>> ordersStream) {
-    return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: ordersStream,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return Center(
-              child: Text(
-            'No orders found.',
-            style: GoogleFonts.montserratAlternates(
-              fontSize: 18,
-              color: AppColors().navy,
-              fontWeight: FontWeight.bold,
-            ),
-          ));
-        }
-
-        final orders = snapshot.data!;
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(10),
-          itemCount: orders.length,
-          itemBuilder: (context, index) {
-            final order = orders[index];
-            final sentTime = order['sentTime'] as Timestamp?;
-            final formattedTime = sentTime != null
-                ? DateFormat.jm().format(sentTime.toDate())
-                : 'Unknown time';
-            final formattedDate = sentTime != null
-                ? DateFormat.yMMMMd().format(sentTime.toDate())
-                : 'Unknown date';
-
-            return OrderTile(
-              title: order['name'] as String? ?? 'No Title',
-              subtitle: 'Order ID: ${order['orderID'] as String? ?? 'N/A'}',
-              status: order['status'] as String? ?? 'Unknown',
-              statusColor: _getStatusColor(order['status'] as String? ?? ''),
-              sentTime: formattedTime,
-              sentDate: formattedDate,
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _deleteRequest({
-    required String customerId,
-    required String requestId,
-    required String employeeId,
-  }) async {
-    try {
-      // Delete from customer's collection
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(customerId)
-          .collection('sentRequests')
-          .doc(requestId)
-          .delete();
-
-      // Delete from employee's collection
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(employeeId)
-          .collection('receivedRequests')
-          .doc(requestId)
-          .delete();
-
-      // Show a success message
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Request deleted successfully!')),
-      );
-    } catch (e) {
-      debugPrint('Error deleting request: $e');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Failed to delete request. Please try again.')),
-      );
-    }
-  }
-
+  // Pending Requests Tab
   Widget _buildPendingRequestsTab(
       Stream<List<Map<String, dynamic>>> pendingRequestsStream) {
     return StreamBuilder<List<Map<String, dynamic>>>(
@@ -205,14 +118,15 @@ class _OrderPageState extends State<OrderPage>
 
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return Center(
-              child: Text(
-            'No pending requests found.',
-            style: GoogleFonts.montserratAlternates(
-              fontSize: 18,
-              color: AppColors().navy,
-              fontWeight: FontWeight.bold,
+            child: Text(
+              'No pending requests found.',
+              style: GoogleFonts.montserratAlternates(
+                fontSize: 18,
+                color: AppColors().navy,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ));
+          );
         }
 
         final requests = snapshot.data!;
@@ -239,17 +153,19 @@ class _OrderPageState extends State<OrderPage>
                 ),
               ),
               subtitle: Text(
-                'Request ID: ${request['requestID'] as String? ?? 'N/A'}\n'
-                'Sent: $formattedDate at $formattedTime',
+                'Request ID: ${request['id']}\nSent: $formattedDate at $formattedTime',
                 style: GoogleFonts.montserratAlternates(fontSize: 14),
               ),
               trailing: IconButton(
                 icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () => _deleteRequest(
-                  customerId: FirebaseAuth.instance.currentUser!.uid,
-                  requestId: request['requestID'] as String,
-                  employeeId: request['receiverId'] as String,
-                ),
+                onPressed: () async {
+                  final employeeId = request['receiverId'] as String;
+                  await _deleteRequest(
+                    customerId: FirebaseAuth.instance.currentUser!.uid,
+                    requestId: request['id'],
+                    employeeId: employeeId,
+                  );
+                },
               ),
             );
           },
@@ -258,18 +174,100 @@ class _OrderPageState extends State<OrderPage>
     );
   }
 
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'pending':
-        return AppColors().orange;
-      case 'confirmed':
-        return AppColors().green;
-      case 'assigned':
-        return AppColors().navy2;
-      case 'accepted':
-        return Colors.pink;
-      default:
-        return Colors.grey;
+  // Orders Tab
+  Widget _buildOrdersTab(Stream<List<Map<String, dynamic>>> ordersStream) {
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: ordersStream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return Center(
+            child: Text(
+              'No orders found.',
+              style: GoogleFonts.montserratAlternates(
+                fontSize: 18,
+                color: AppColors().navy,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          );
+        }
+
+        final orders = snapshot.data!;
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(10),
+          itemCount: orders.length,
+          itemBuilder: (context, index) {
+            final order = orders[index];
+            final sentTime = order['sentTime'] as Timestamp?;
+            final formattedTime = sentTime != null
+                ? DateFormat.jm().format(sentTime.toDate())
+                : 'Unknown time';
+            final formattedDate = sentTime != null
+                ? DateFormat.yMMMMd().format(sentTime.toDate())
+                : 'Unknown date';
+
+            return ListTile(
+              title: Text(
+                order['name'] as String? ?? 'No Title',
+                style: GoogleFonts.montserratAlternates(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              subtitle: Text(
+                'Order ID: ${order['id']}\nStarted: $formattedDate at $formattedTime',
+                style: GoogleFonts.montserratAlternates(fontSize: 14),
+              ),
+              trailing: Icon(
+                Icons.check_circle,
+                color: AppColors().green,
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _deleteRequest({
+    required String customerId,
+    required String requestId,
+    required String employeeId,
+  }) async {
+    try {
+      // Delete from customer's collection
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(customerId)
+          .collection('sentRequests')
+          .doc(requestId)
+          .delete();
+
+      // Delete from employee's collection
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(employeeId)
+          .collection('recievedRequests')
+          .doc(requestId)
+          .delete();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Request deleted successfully!')),
+      );
+    } catch (e) {
+      debugPrint('Error deleting request: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Failed to delete request. Please try again.')),
+      );
     }
   }
 }

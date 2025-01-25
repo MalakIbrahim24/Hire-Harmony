@@ -41,6 +41,7 @@ void main() async {
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50cWd0ZmtpeWV2dHRsbHl5ZWNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzYxNTQzNDIsImV4cCI6MjA1MTczMDM0Mn0.7APvbYoT5BpkmV1goMLIzJ7Ys2pehlns-hCO5f1oIFU',
   );
 
+  
   runApp(ChangeNotifierProvider(
     create: (context) => ThemeProvider(),
     child: const MyApp(),
@@ -56,10 +57,6 @@ void main() async {
 
 
 
-  
-  
-  
-
 }
 
 class MyApp extends StatelessWidget {
@@ -73,7 +70,7 @@ class MyApp extends StatelessWidget {
           // create: (context) => AuthCubit(),
           create: (context) => AuthCubit()..getCurrentUser(),
         ),
-      ],
+      ], 
       child: Builder(
         builder: (context) {
           final cubit = BlocProvider.of<AuthCubit>(context);

@@ -151,9 +151,12 @@ class _PhonePageState extends State<PhonePage> {
   }
 
   // Verify OTP and register the user
-  Future<void> verifyOtpAndRegister(Map<String, dynamic> formData) async {
+  Future<void> verifyOtpAndRegister(
+      Map<String, dynamic> formData, List<String> categories) async {
     const availability = 'available';
-    const img = 'lib/assets/images/employee.png';
+    const state = 'accepted';
+    const img =
+        'https://thumbs.dreamstime.com/b/default-avatar-profile-icon-vector-social-media-user-image-182145777.jpg';
 
     try {
       // Verify the OTP and sign in the user with the phone credential
@@ -183,7 +186,6 @@ class _PhonePageState extends State<PhonePage> {
       String hashedPassword = _hashPassword(formData['password']!);
 
       // Upload images to Supabase
-
       final idImage = formData['idImage'] as File;
       final selfieImage = formData['selfieImage'] as File;
 
@@ -192,7 +194,7 @@ class _PhonePageState extends State<PhonePage> {
       final selfieImageUrl = await _uploadToSupabase(
           selfieImage, 'selfie_${DateTime.now().millisecondsSinceEpoch}.jpg');
 
-      // Save data in Firestore
+      // Save user data in the `users` collection
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
         'name': formData['name'],
         'email': formData['email'],
@@ -204,6 +206,17 @@ class _PhonePageState extends State<PhonePage> {
         'uid': user.uid,
         'img': img,
         'availability': availability,
+        'state': state,
+        'similarity': formData['similarity'],
+      });
+
+      // Save categories in the `empcategories` collection
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('empcategories')
+          .add({
+        'categories': categories,
       });
 
       // Navigate to the success page
@@ -228,6 +241,9 @@ class _PhonePageState extends State<PhonePage> {
   }
 
   Future<void> verifyOtpAndRegisterCus(Map<String, dynamic> formData) async {
+    const img =
+        'https://thumbs.dreamstime.com/b/default-avatar-profile-icon-vector-social-media-user-image-182145777.jpg';
+
     try {
       // Verify the OTP and sign in the user with the phone credential
       final PhoneAuthCredential credential = PhoneAuthProvider.credential(
@@ -265,6 +281,7 @@ class _PhonePageState extends State<PhonePage> {
         'phone': '+970${_phoneController.text.trim()}',
         'role': 'employee',
         'uid': user.uid,
+        'img': img,
       });
 
       // Navigate to the success page
@@ -294,6 +311,9 @@ class _PhonePageState extends State<PhonePage> {
 
     final Map<String, dynamic>? formData =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+
+    final List<String> categories =
+        (formData?['categories'] as List<dynamic>?)?.cast<String>() ?? [];
 
     if (formData == null) {
       return const Center(
@@ -435,7 +455,8 @@ class _PhonePageState extends State<PhonePage> {
                               onPressed: isVerifyButtonEnabled
                                   ? () async {
                                       if (role == 'employee') {
-                                        await verifyOtpAndRegister(formData);
+                                        await verifyOtpAndRegister(
+                                            formData, categories);
                                       } else if (role == 'customer') {
                                         await verifyOtpAndRegisterCus(formData);
                                       } else {

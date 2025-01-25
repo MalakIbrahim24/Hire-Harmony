@@ -397,6 +397,7 @@ class _ViewEmpProfilePageState extends State<ViewEmpProfilePage>
 
                                   String description =
                                       descriptionController.text.trim();
+                                  String name = titleController.text.trim();
 
                                   if (description.isEmpty) {
                                     ScaffoldMessenger.of(context).showSnackBar(
@@ -408,31 +409,41 @@ class _ViewEmpProfilePageState extends State<ViewEmpProfilePage>
                                   }
 
                                   try {
+                                    // Generate a unique requestId
+                                    final String requestId =
+                                        _firestore.collection('dummy').doc().id;
+
                                     // Define the request data
                                     final requestData = {
+                                      'requestId': requestId,
                                       'senderId': loggedInUserId,
                                       'receiverId': widget.employeeId,
                                       'description': description,
                                       'timestamp': FieldValue.serverTimestamp(),
-                                      'pendingRequests': 'pending',
+                                      'status': 'pending',
+                                      'name': name,
                                     };
 
-                                    // Save to both users' sentRequests collections
+                                    // Save to the customer's `sentRequests` collection
                                     final userSentRequests = _firestore
                                         .collection('users')
                                         .doc(loggedInUserId)
                                         .collection('sentRequests');
-                                    final employeeSentRequests = _firestore
+                                    await userSentRequests
+                                        .doc(requestId)
+                                        .set(requestData);
+
+                                    // Save to the employee's `receivedRequests` collection
+                                    final employeeReceivedRequests = _firestore
                                         .collection('users')
                                         .doc(widget.employeeId)
                                         .collection('recievedRequests');
+                                    await employeeReceivedRequests
+                                        .doc(requestId)
+                                        .set(requestData);
 
-                                    await userSentRequests.add(requestData);
-                                    await employeeSentRequests.add(requestData);
-
-                                    // ignore: use_build_context_synchronously
                                     Navigator.pop(context); // Close the dialog
-                                    // ignore: use_build_context_synchronously
+
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
                                           content: Text(
@@ -440,7 +451,6 @@ class _ViewEmpProfilePageState extends State<ViewEmpProfilePage>
                                     );
                                   } catch (e) {
                                     debugPrint('Error sending request: $e');
-                                    // ignore: use_build_context_synchronously
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
                                           content:
