@@ -7,12 +7,12 @@ plugins {
 
 android {
     namespace = "com.example.hire_harmony"
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         applicationId "com.example.hire_harmony"
         minSdkVersion 23
-        targetSdkVersion 34
+        targetSdkVersion 35
         versionCode flutter.versionCode
         versionName flutter.versionName
         multiDexEnabled true

@@ -1,9 +1,6 @@
-import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/material.dart';
 /*import 'package:flutter_local_notifications/flutter_local_notifications.dart';*/
-import 'package:hire_harmony/api/notification_screen.dart';
-import 'package:hire_harmony/main.dart';
 
 Future<void> handleBackgroundMessage(RemoteMessage message) async {
   print('Title: ${message.notification?.title}');
@@ -12,8 +9,9 @@ Future<void> handleBackgroundMessage(RemoteMessage message) async {
 }
 
 
-/*
+
 class FirebaseApi {
+  /*
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
 
   final AndroidNotificationChannel androidChannel =
@@ -121,5 +119,29 @@ class FirebaseApi {
 
     await initPushNotifications();
     await initLocalNotifications();
+  }*/
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  /// حفظ إحداثيات الموقع الخاصة بالمستخدم في Firestore
+  Future<void> saveUserLocation(String userId, double latitude, double longitude) async {
+    try {
+      await _firestore.collection('users').doc(userId).set({
+        'location': {
+          'latitude': latitude,
+          'longitude': longitude,
+        },
+      }, SetOptions(merge: true)); // يدمج البيانات إذا كان المستخدم موجوداً
+    } catch (e) {
+      throw Exception("Failed to save user location: $e");
+    }
   }
-}*/
+   Future<bool> isUserLocationSaved(String userId) async {
+    final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+    if (userDoc.exists) {
+      return userDoc.data()?['location'] != null;
+    }
+    return false;
+  }
+
+
+}

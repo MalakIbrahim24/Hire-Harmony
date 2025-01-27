@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hire_harmony/utils/app_colors.dart';
 import 'package:hire_harmony/views/pages/forms/emp_phone_form.dart';
 import 'package:hire_harmony/views/widgets/back_icon_button.dart';
 

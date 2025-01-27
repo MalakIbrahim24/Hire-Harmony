@@ -164,7 +164,7 @@ Future<void> _fetchEmployeeData() async {
 
 
   void _showAddServiceDialog(BuildContext context) {
-    final TextEditingController _serviceController = TextEditingController();
+    final TextEditingController serviceController = TextEditingController();
 
     showDialog(
       context: context,
@@ -178,7 +178,7 @@ Future<void> _fetchEmployeeData() async {
                 color: Theme.of(context).colorScheme.inversePrimary,
               )),
           content: TextField(
-            controller: _serviceController,
+            controller: serviceController,
             decoration: InputDecoration(
               hintText: 'Enter service name',
               border: OutlineInputBorder(
@@ -195,8 +195,8 @@ Future<void> _fetchEmployeeData() async {
             ),
             TextButton(
               onPressed: () {
-                if (_serviceController.text.isNotEmpty) {
-                  _saveServiceToFirestore(_serviceController.text.trim());
+                if (serviceController.text.isNotEmpty) {
+                  _saveServiceToFirestore(serviceController.text.trim());
                   Navigator.of(context).pop();
                 }
               },

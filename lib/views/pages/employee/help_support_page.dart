@@ -6,7 +6,7 @@ class HelpSupportPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var _messageController;
+    var messageController;
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -57,7 +57,7 @@ class HelpSupportPage extends StatelessWidget {
                 ],
               ),
               child: TextField(
-                controller: _messageController,
+                controller: messageController,
                 maxLines: 7, // عدد الأسطر المطلوب عرضه
                 minLines: 1, // أقل عدد من الأسطر عند التقلص
                 decoration: InputDecoration(

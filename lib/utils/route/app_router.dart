@@ -26,7 +26,6 @@ import 'package:hire_harmony/views/pages/employee/emp_navbar.dart';
 import 'package:hire_harmony/views/pages/employee/emp_notifications_page.dart';
 import 'package:hire_harmony/views/pages/employee/emp_profile_info_page.dart';
 //import 'package:hire_harmony/views/pages/forms/emp_sign_up_form.dart';
-import 'package:hire_harmony/views/pages/signup/sign_up_page.dart';
 import 'package:hire_harmony/views/pages/customer/cus_verification_success_page.dart';
 import 'package:hire_harmony/views/pages/customer/cus_messages_page.dart';
 import 'package:hire_harmony/views/pages/customer/cus_notifications_page.dart';
@@ -36,7 +35,6 @@ import 'package:hire_harmony/views/pages/employee/emp_verification_success_page.
 import 'package:hire_harmony/views/pages/employee/emp_home_page.dart';
 import 'package:hire_harmony/views/pages/signup/forgot_password_page.dart';
 import 'package:hire_harmony/views/pages/login/login_page.dart';
-import 'package:hire_harmony/views/pages/employee/emp_id_verification_page.dart';
 //import 'package:hire_harmony/views/pages/employee/emp_phone_page.dart';
 import 'package:hire_harmony/views/pages/signup/phone_page.dart';
 import 'package:hire_harmony/views/pages/signup/sign_up_choice.dart';

@@ -1,9 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:hire_harmony/services/auth_services.dart';
 import 'package:hire_harmony/services/chat/chat_services.dart';
-import 'package:hire_harmony/utils/app_colors.dart';
 import 'package:hire_harmony/views/pages/chatePage.dart';
 
 class ChatListPage extends StatefulWidget {

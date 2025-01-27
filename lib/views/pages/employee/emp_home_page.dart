@@ -1,14 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hire_harmony/api/firebase_api.dart';
 import 'package:hire_harmony/utils/app_colors.dart';
 import 'package:hire_harmony/views/pages/employee/advertisement_screen.dart';
 import 'package:hire_harmony/views/pages/employee/booking_screen.dart';
 import 'package:hire_harmony/views/pages/employee/contact_us_page.dart';
-import 'package:hire_harmony/views/pages/employee/contact_us_page.dart';
 import 'package:hire_harmony/views/pages/employee/emp_notifications_page.dart';
 import 'package:hire_harmony/views/pages/employee/tickets_page.dart';
+import 'package:hire_harmony/views/pages/location_page.dart';
 import 'package:hire_harmony/views/widgets/employee/prev_work.dart';
 
 class EmpHomePage extends StatefulWidget {
@@ -21,7 +24,28 @@ class EmpHomePage extends StatefulWidget {
 class _EmpHomePageState extends State<EmpHomePage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   String userName = "User"; // Default user name
+    final String? userId = FirebaseAuth.instance.currentUser?.uid;
 
+ @override
+  void initState() {
+    super.initState();
+    _checkUserLocation();
+    fetchUserName(); // Fetch user name when the page initializes
+
+  }
+
+  Future<void> _checkUserLocation() async {
+    await Future.delayed(const Duration(seconds: 10)); // الانتظار لمدة 10 ثوانٍ
+
+    // افترض أن لديك Firebase API تتحقق من الموقع
+    final isLocationSaved = await FirebaseApi().isUserLocationSaved(userId!);
+
+ if (!isLocationSaved) {
+  // تحويل المستخدم إلى صفحة الموقع باستخدام GetX
+  await Get.to(() => const LocationPage());
+}
+
+  }
   Future<String?> _fetchEmployeeState(String userId) async {
     try {
       final DocumentSnapshot userDoc = await FirebaseFirestore.instance
@@ -59,11 +83,7 @@ class _EmpHomePageState extends State<EmpHomePage> {
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    fetchUserName(); // Fetch user name when the page initializes
-  }
+  
 
   @override
   Widget build(BuildContext context) {

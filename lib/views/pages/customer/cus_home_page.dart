@@ -1,9 +1,14 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hire_harmony/api/firebase_api.dart';
 import 'package:hire_harmony/utils/app_colors.dart';
 import 'package:hire_harmony/views/pages/customer/cus_notifications_page.dart';
 import 'package:hire_harmony/views/pages/customer/search_and_filter.dart';
 import 'package:hire_harmony/views/pages/customer/view_all_popular_services.dart';
+import 'package:hire_harmony/views/pages/location_page.dart';
 import 'package:hire_harmony/views/widgets/customer/best_worker.dart';
 import 'package:hire_harmony/views/widgets/customer/category_widget.dart';
 import 'package:hire_harmony/views/widgets/customer/custom_carousel_indicator.dart';
@@ -12,8 +17,34 @@ import 'package:hire_harmony/views/widgets/customer/populer_service.dart';
 import 'package:hire_harmony/views/widgets/customer/view_all_best_workers_page.dart';
 import 'package:hire_harmony/views/widgets/customer/view_all_categories.dart';
 
-class CusHomePage extends StatelessWidget {
+class CusHomePage extends StatefulWidget {
   const CusHomePage({super.key});
+
+  @override
+  State<CusHomePage> createState() => _CusHomePageState();
+}
+
+class _CusHomePageState extends State<CusHomePage> {
+  final String? userId = FirebaseAuth.instance.currentUser?.uid;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkUserLocation();
+  }
+
+  Future<void> _checkUserLocation() async {
+    await Future.delayed(const Duration(seconds: 10)); // الانتظار لمدة 10 ثوانٍ
+
+    // افترض أن لديك Firebase API تتحقق من الموقع
+    final isLocationSaved = await FirebaseApi().isUserLocationSaved(userId!);
+
+ if (!isLocationSaved) {
+  // تحويل المستخدم إلى صفحة الموقع باستخدام GetX
+  await Get.to(() => const LocationPage());
+}
+
+  }
 
   @override
   Widget build(BuildContext context) {
