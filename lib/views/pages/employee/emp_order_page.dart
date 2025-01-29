@@ -6,13 +6,15 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 
 class EmpOrderPage extends StatelessWidget {
-  const EmpOrderPage({super.key});
+
+  const EmpOrderPage({super.key });
 
   Future<void> _markOrderAsCompleted(
       BuildContext context,
       String orderId,
       String customerId,
       String employeeId,
+
       Map<String, dynamic> orderData) async {
     try {
       final FirebaseFirestore firestore = FirebaseFirestore.instance;
@@ -21,6 +23,9 @@ class EmpOrderPage extends StatelessWidget {
       final orderUpdateData = {
         ...orderData,
         'status': 'completed',
+        'reviewed' :'false',
+
+        
       };
 
       // Move the order to `completedOrders` for customer
@@ -29,9 +34,10 @@ class EmpOrderPage extends StatelessWidget {
           .doc(customerId)
           .collection('completedOrders')
           .doc(orderId)
-          .set(orderUpdateData);
+          .set(orderUpdateData );
 
       // Move the order to `completedOrders` for employee
+
       await firestore
           .collection('users')
           .doc(employeeId)
@@ -334,6 +340,7 @@ class EmpOrderPage extends StatelessWidget {
       },
     );
   }
+
 
   Widget _buildOrdersTabCom(
     String loggedInUserId,

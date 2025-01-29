@@ -101,50 +101,52 @@ class _OrderPageState extends State<OrderPage>
                 .map((doc) => {...doc.data(), 'id': doc.id})
                 .toList());
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
+    return SafeArea(
+      child: Scaffold(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        elevation: 0,
-        centerTitle: true,
-        title: Text(
-          'Orders & Requests',
-          style: GoogleFonts.montserratAlternates(
-            fontSize: 22,
-            color: Theme.of(context).colorScheme.primary,
-            fontWeight: FontWeight.bold,
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          elevation: 0,
+          centerTitle: true,
+          title: Text(
+            'Orders & Requests',
+            style: GoogleFonts.montserratAlternates(
+              fontSize: 22,
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          bottom: TabBar(
+            dividerColor: AppColors().transparent,
+            controller: _tabController,
+            labelColor: AppColors().orange,
+            unselectedLabelColor: Colors.grey,
+            indicatorColor: AppColors().orange,
+            labelStyle: const TextStyle(
+              fontSize: 16.5, // Text size for selected tabs
+              fontWeight: FontWeight.bold,
+            ),
+            unselectedLabelStyle: const TextStyle(
+              fontSize: 14, // Text size for unselected tabs
+              fontWeight: FontWeight.normal,
+            ),
+            tabs: const [
+              Tab(text: 'Pending'),
+              Tab(text: 'In progress'),
+              Tab(text: 'Completed'),
+            ],
           ),
         ),
-        bottom: TabBar(
-          dividerColor: AppColors().transparent,
+        body: TabBarView(
           controller: _tabController,
-          labelColor: AppColors().orange,
-          unselectedLabelColor: Colors.grey,
-          indicatorColor: AppColors().orange,
-          labelStyle: const TextStyle(
-            fontSize: 16.5, // Text size for selected tabs
-            fontWeight: FontWeight.bold,
-          ),
-          unselectedLabelStyle: const TextStyle(
-            fontSize: 14, // Text size for unselected tabs
-            fontWeight: FontWeight.normal,
-          ),
-          tabs: const [
-            Tab(text: 'Pending'),
-            Tab(text: 'In progress'),
-            Tab(text: 'Completed'),
+          children: [
+            _buildPendingRequestsTab(pendingRequestsStream),
+            _buildOrdersTab(inProgressOrdersStream),
+            _buildOrdersTab(completedOrdersStream,
+                isCompleted: true), // ✅ تمكين النقر للطلبات المكتملة فقط
           ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildPendingRequestsTab(pendingRequestsStream),
-          _buildOrdersTab(inProgressOrdersStream),
-          _buildOrdersTab(completedOrdersStream,
-              isCompleted: true), // ✅ تمكين النقر للطلبات المكتملة فقط
-        ],
       ),
     );
   }
@@ -290,7 +292,9 @@ class _OrderPageState extends State<OrderPage>
               ),
               trailing: Icon(
                 Icons.circle,
-                color: _getStatusColor(status),
+                color: (order['reviewed'] == true)
+                    ? Colors.grey
+                    : _getStatusColor(status),
                 size: 12,
               ),
 

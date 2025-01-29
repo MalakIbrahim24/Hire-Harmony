@@ -32,15 +32,7 @@ User? getCurrentUser(){
         email: email,
         password: password, // Use raw password directly
       );
-      _firestore.collection('user').doc(
-  userCredential.user!.uid).set({
-    "uid":userCredential.user!.uid,
-    "email":email,
-
-    
-  
-    });
-
+     
       return userCredential.user != null;
     } catch (e) {
       return false;
@@ -55,14 +47,7 @@ User? getCurrentUser(){
         password: password, // Use raw password here
       );
 
-_firestore.collection('user').doc(
-  userCredential.user!.uid).set({
-    "uid":userCredential.user!.uid,
-    "email":email,
 
-    
-  
-    });
       User? user = userCredential.user;
       if (user != null) {
         // Save user info (without password) in Firestore

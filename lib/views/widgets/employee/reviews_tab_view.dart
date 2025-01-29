@@ -41,6 +41,8 @@ class ReviewsTapView extends StatelessWidget {
             final data = reviews[index].data() as Map<String, dynamic>;
             final reviewerName = data['name'] ?? 'Anonymous';
             final reviewText = data['review'] ?? '';
+                final String reviewerId = data['customerId'] ?? ''; // 🔹 جلب ID المراجع
+
             final double rating = double.tryParse(data['rating']?.toString() ?? '0.0') ?? 0.0;
 
             // تحويل Timestamp إلى تاريخ مقروء
@@ -66,15 +68,44 @@ class ReviewsTapView extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            CircleAvatar(
-                              backgroundColor: AppColors().lightblue,
-                              child: Text(
-                                reviewerName.isNotEmpty
-                                    ? reviewerName[0].toUpperCase()
-                                    : 'A', // عرض أول حرف من الاسم
-                                style: const TextStyle(color: Colors.white),
-                              ),
-                            ),
+                            FutureBuilder<DocumentSnapshot>(
+  future: FirebaseFirestore.instance.collection('users').doc(reviewerId).get(),
+  builder: (context, snapshot) {
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return const CircleAvatar(
+        backgroundColor: Colors.grey, 
+        child: Icon(Icons.person, color: Colors.white),
+      );
+    }
+
+    if (!snapshot.hasData || !snapshot.data!.exists) {
+      return CircleAvatar(
+        backgroundColor: AppColors().lightblue,
+        child: Text(
+          reviewerName.isNotEmpty ? reviewerName[0].toUpperCase() : 'A',
+          style: const TextStyle(color: Colors.white),
+        ),
+      );
+    }
+
+    final userData = snapshot.data!.data() as Map<String, dynamic>;
+    final String imageUrl = userData['img'] ?? '';
+
+    return CircleAvatar(
+      backgroundColor: Colors.transparent,
+      backgroundImage: imageUrl.isNotEmpty
+          ? NetworkImage(imageUrl)
+          : null, // تحميل الصورة إذا كانت متاحة
+      child: imageUrl.isEmpty
+          ? Text(
+              reviewerName.isNotEmpty ? reviewerName[0].toUpperCase() : 'A',
+              style: const TextStyle(color: Colors.white),
+            )
+          : null, // إذا لم يكن هناك صورة، استخدم أول حرف من الاسم
+    );
+  },
+),
+
                             const SizedBox(width: 10),
                             Text(
                               reviewerName,
