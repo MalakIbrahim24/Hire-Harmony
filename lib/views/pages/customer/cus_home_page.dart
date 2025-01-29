@@ -1,7 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hire_harmony/api/firebase_api.dart';
 import 'package:hire_harmony/utils/app_colors.dart';
@@ -38,6 +37,7 @@ class _CusHomePageState extends State<CusHomePage> {
 
     // افترض أن لديك Firebase API تتحقق من الموقع
     final isLocationSaved = await FirebaseApi().isUserLocationSaved(userId!);
+    debugPrint(isLocationSaved.toString());
 
  if (!isLocationSaved) {
   // تحويل المستخدم إلى صفحة الموقع باستخدام GetX

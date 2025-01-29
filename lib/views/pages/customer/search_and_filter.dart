@@ -114,9 +114,9 @@ class _SearchAndFilterState extends State<SearchAndFilter> {
             'img': data['img'] ?? '',
             'role': data['role'] ?? '',
             'availability': data['availability'] ?? 'Unavailable',
-            'location': data['location'] ?? 'Unknown',
+            'location': data['location'].toString() ?? 'Unknown',
             'rating': data['rating'] ?? 0,
-            'reviews': data['reviews'] ?? 0,
+            'reviewsNum': data['reviewsNum'] ?? 0,
           },
           queryBuilder: (query) => query.where('role', isEqualTo: 'employee'),
         ),
@@ -216,13 +216,14 @@ class _SearchAndFilterState extends State<SearchAndFilter> {
                               const Icon(Icons.star,
                                   color: Colors.amber, size: 20),
                               const SizedBox(width: 8),
-                              Text(
-                                '${employee['rating'] ?? 0} (${employee['reviews'] ?? 0})',
-                                style:  TextStyle(
-                                  fontSize: 13,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                              ),
+                             Text(
+  '${employee['rating']?.toString() ?? '0.0'} (${employee['reviewsNum']?.toString() ?? '0'}) reviews',
+  style: TextStyle(
+    fontSize: 13,
+    color: Theme.of(context).colorScheme.primary,
+  ),
+),
+
                             ],
                           ),
                         ],
@@ -241,10 +242,9 @@ class _SearchAndFilterState extends State<SearchAndFilter> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Status: ${employee['availability'] ?? 'Unknown'}',
+                            'Status: ${employee['availability'] == true ? 'Available' : 'Not Available'}',
                             style: TextStyle(
-                              color: (employee['availability'] ?? 'Unknown') ==
-                                      'Available'
+                              color: employee['availability'] == true
                                   ? Colors.green
                                   : Colors.red,
                               fontWeight: FontWeight.bold,

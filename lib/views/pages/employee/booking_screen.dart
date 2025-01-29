@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hire_harmony/utils/app_colors.dart';
+import 'package:hire_harmony/views/pages/chatePage.dart';
 import 'package:intl/intl.dart';
 
 class BookingScreen extends StatelessWidget {
@@ -28,12 +29,18 @@ class BookingScreen extends StatelessWidget {
             style: TextStyle(color: Colors.black, fontSize: 18),
           ),
           bottom: TabBar(
-            indicator: null,
-            indicatorColor: AppColors().orange,
-            indicatorWeight: 2,
+            dividerColor: AppColors().transparent,
             labelColor: AppColors().orange,
-            unselectedLabelColor: AppColors().grey,
-            labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+            unselectedLabelColor: Colors.grey,
+            indicatorColor: AppColors().orange,
+            labelStyle: const TextStyle(
+              fontSize: 16, // Text size for selected tabs
+              fontWeight: FontWeight.bold,
+            ),
+            unselectedLabelStyle: const TextStyle(
+              fontSize: 14, // Text size for unselected tabs
+              fontWeight: FontWeight.normal,
+            ),
             tabs: const [
               Tab(text: 'New Requests'),
               Tab(text: 'Active Bookings'),
@@ -68,8 +75,6 @@ class NewRequestsTab extends StatefulWidget {
 class _NewRequestsTabState extends State<NewRequestsTab> {
   Future<void> _acceptRequest(String requestId, String receiverId) async {
     try {
-      // Generate a unique ID
-
       // Fetch the request data to get senderId
       final requestDoc = await FirebaseFirestore.instance
           .collection('users')
@@ -84,6 +89,25 @@ class _NewRequestsTabState extends State<NewRequestsTab> {
 
       final data = requestDoc.data() as Map<String, dynamic>;
       final senderId = data['senderId'];
+
+      // Get sender's info
+      final senderDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(senderId)
+          .get();
+
+      if (!senderDoc.exists) {
+        throw Exception('Sender does not exist.');
+      }
+
+      final senderData = senderDoc.data() as Map<String, dynamic>;
+      final senderEmail = senderData['email'];
+      final senderName = senderData['name'];
+
+      // Generate chatRoomID in a consistent order
+      final chatRoomID = receiverId.compareTo(senderId) < 0
+          ? '${receiverId}_$senderId'
+          : '${senderId}_$receiverId';
 
       // Update status to "active" in both collections
       await FirebaseFirestore.instance
@@ -100,10 +124,46 @@ class _NewRequestsTabState extends State<NewRequestsTab> {
           .doc(requestId)
           .update({'status': 'active'});
 
+      // Check if a chat room exists
+      final chatRoomDoc = await FirebaseFirestore.instance
+          .collection('chat_rooms')
+          .doc(chatRoomID)
+          .get();
+
+      if (chatRoomDoc.exists) {
+        // If chat room exists, update chatController
+        await FirebaseFirestore.instance
+            .collection('chat_rooms')
+            .doc(chatRoomID)
+            .update({'chatController': 'open'});
+      } else {
+        // If no chat room exists, create a new one
+        await FirebaseFirestore.instance
+            .collection('chat_rooms')
+            .doc(chatRoomID)
+            .set({
+          'participants': [receiverId, senderId],
+          'chatController': 'open',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Request accepted successfully!')),
+      );
+
+      // Navigate to the chat room
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => Chatepage(
+            reciverEmail: senderEmail,
+            reciverID: senderId,
+            reciverName: senderName,
+          ),
+        ),
       );
     } catch (e) {
       debugPrint('Error accepting request: $e');
@@ -347,11 +407,48 @@ class ActiveBookingsTab extends StatelessWidget {
         'name': data['name'] ?? 'Unknown',
         'orderId': activeRequest.id, // Same as request document ID
         'senderId': senderId,
+        'reciverId': loggedInUserId,
         'img': data['senderImg'] ?? 'https://via.placeholder.com/150',
         'description': data['description'] ?? 'No description provided',
         'confirmedTime': FieldValue.serverTimestamp(),
         'status': 'in progress',
       };
+
+      // Check if a chat room exists
+      final chatRoomQuery = await FirebaseFirestore.instance
+          .collection('chat_rooms')
+          .where('participants', arrayContains: loggedInUserId)
+          .get();
+
+      DocumentReference? chatRoomRef;
+
+// Check if the query has any documents
+      if (chatRoomQuery.docs.isNotEmpty) {
+        // Try to find the matching chat room
+        final matchingChatRooms = chatRoomQuery.docs.where((doc) {
+          final participants = doc['participants'] as List<dynamic>;
+          return participants.contains(senderId) && participants.length == 2;
+        }).toList();
+
+        if (matchingChatRooms.isNotEmpty) {
+          final chatRoomDoc =
+              matchingChatRooms.first; // Get the first matching chat room
+          chatRoomRef = FirebaseFirestore.instance
+              .collection('chat_rooms')
+              .doc(chatRoomDoc.id);
+          await chatRoomRef.update({'chatController': 'open'});
+        }
+      }
+
+// If no matching chat room is found, create a new one
+      if (chatRoomRef == null) {
+        chatRoomRef = FirebaseFirestore.instance.collection('chat_rooms').doc();
+        await chatRoomRef.set({
+          'participants': [loggedInUserId, senderId],
+          'chatController': 'open',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
 
       // Update the status to "in progress" in both collections
       await FirebaseFirestore.instance
@@ -375,19 +472,20 @@ class ActiveBookingsTab extends StatelessWidget {
           .collection('orders')
           .doc(activeRequest.id)
           .set(orderData);
-// Add the booking to the "bookingHistory" collection of the employee
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(loggedInUserId)
-          .collection('bookingHistory')
-          .doc(activeRequest.id)
-          .set(orderData);
 
       // Add the booking to the "orders" collection of the customer
       await FirebaseFirestore.instance
           .collection('users')
           .doc(senderId)
           .collection('orders')
+          .doc(activeRequest.id)
+          .set(orderData);
+
+      // Add the booking to the "bookingHistory" collection of the employee
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(loggedInUserId)
+          .collection('bookingHistory')
           .doc(activeRequest.id)
           .set(orderData);
 
@@ -419,9 +517,36 @@ class ActiveBookingsTab extends StatelessWidget {
     }
   }
 
-  Future<void> _revokeRequest(
-      BuildContext context, DocumentSnapshot activeRequest) async {
+  Future<void> _revokeRequest(BuildContext context,
+      DocumentSnapshot activeRequest, String loggedInUserId) async {
     try {
+      // Extract customer (sender) ID
+      final data = activeRequest.data() as Map<String, dynamic>;
+      final String senderId = data['senderId'] ?? '';
+
+      // Query Firestore to find the correct chat room
+      final chatRoomQuery = await FirebaseFirestore.instance
+          .collection('chat_rooms')
+          .where('participants', arrayContains: loggedInUserId)
+          .get();
+
+      // Find the chat room with the matching participants
+      final chatRoomDoc = chatRoomQuery.docs.firstWhere(
+        (doc) {
+          final participants = doc['participants'] as List<dynamic>;
+          return participants.contains(senderId) && participants.length == 2;
+        },
+        orElse: () => throw Exception('Chat room not found.'),
+      );
+
+      final chatRoomId = chatRoomDoc.id;
+
+      // Update the chatController field to "closed" in the chat room
+      await FirebaseFirestore.instance
+          .collection('chat_rooms')
+          .doc(chatRoomId)
+          .update({'chatController': 'closed'});
+
       // Delete the request document
       await activeRequest.reference.delete();
 
@@ -588,8 +713,8 @@ class ActiveBookingsTab extends StatelessWidget {
                             ),
                             const SizedBox(height: 8),
                             ElevatedButton(
-                              onPressed: () =>
-                                  _revokeRequest(context, activeRequest),
+                              onPressed: () => _revokeRequest(
+                                  context, activeRequest, loggedInUserId),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors().red,
                                 minimumSize: const Size(80, 36),

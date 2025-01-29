@@ -150,7 +150,7 @@ class AppRouter {
 */
       case AppRoutes.empProfileInfoPage:
         return MaterialPageRoute(
-          builder: (_) => const EmpProfileInfoPage(),
+          builder: (_) => EmpProfileInfoPage( employeeId: FirebaseAuth.instance.currentUser!.uid),
           settings: settings,
         );
       case AppRoutes.accountDeletionScreen:

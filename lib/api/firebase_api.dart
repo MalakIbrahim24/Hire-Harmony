@@ -11,6 +11,7 @@ Future<void> handleBackgroundMessage(RemoteMessage message) async {
 
 
 class FirebaseApi {
+
   /*
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
 
@@ -123,7 +124,7 @@ class FirebaseApi {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   /// حفظ إحداثيات الموقع الخاصة بالمستخدم في Firestore
-  Future<void> saveUserLocation(String userId, double latitude, double longitude) async {
+  Future<void> saveUserLocation(String userId, String latitude, String longitude) async {
     try {
       await _firestore.collection('users').doc(userId).set({
         'location': {

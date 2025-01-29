@@ -389,4 +389,22 @@ class FirestoreService {
   //       .doc(uid)
   //       .update({'notifications': settings});
   // }
+
+
+Future<Map<String, dynamic>?> getUserData(String userId) async {
+  try {
+    DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+
+    if (userDoc.exists) {
+      return userDoc.data() as Map<String, dynamic>;
+    } else {
+      print("No user found with this ID");
+      return null;
+    }
+  } catch (e) {
+    print("Error fetching user data: $e");
+    return null;
+  }
+}
+
 }

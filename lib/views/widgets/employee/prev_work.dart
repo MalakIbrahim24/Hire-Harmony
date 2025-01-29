@@ -41,7 +41,7 @@ class _PrevWorkState extends State<PrevWork> {
       );
     }
 
-    return SingleChildScrollView(
+    return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

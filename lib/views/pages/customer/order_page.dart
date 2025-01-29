@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:hire_harmony/views/pages/customer/reviews_page.dart';
 import 'package:intl/intl.dart';
 import 'package:hire_harmony/utils/app_colors.dart';
 
@@ -19,13 +20,31 @@ class _OrderPageState extends State<OrderPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this); // Two tabs
+    _tabController = TabController(length: 3, vsync: this); // Three tabs
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<String> getEmployeeNameById(String userId) async {
+    try {
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+
+      if (userDoc.exists) {
+        return userDoc['name'] ?? 'Unknown';
+      } else {
+        return 'Unknown';
+      }
+    } catch (e) {
+      print("Error fetching employee name: $e");
+      return 'Error';
+    }
   }
 
   @override
@@ -61,20 +80,32 @@ class _OrderPageState extends State<OrderPage>
                 .map((doc) => {...doc.data(), 'id': doc.id})
                 .toList());
 
-    final Stream<List<Map<String, dynamic>>> ordersStream = FirebaseFirestore
-        .instance
-        .collection('users')
-        .doc(loggedInUserId)
-        .collection('orders')
-        .where('status', isEqualTo: 'in progress')
-        .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => {...doc.data(), 'id': doc.id}).toList());
+    final Stream<List<Map<String, dynamic>>> inProgressOrdersStream =
+        FirebaseFirestore.instance
+            .collection('users')
+            .doc(loggedInUserId)
+            .collection('orders')
+            .where('status', isEqualTo: 'in progress')
+            .snapshots()
+            .map((snapshot) => snapshot.docs
+                .map((doc) => {...doc.data(), 'id': doc.id})
+                .toList());
+
+    final Stream<List<Map<String, dynamic>>> completedOrdersStream =
+        FirebaseFirestore.instance
+            .collection('users')
+            .doc(loggedInUserId)
+            .collection('completedOrders')
+            .snapshots()
+            .map((snapshot) => snapshot.docs
+                .map((doc) => {...doc.data(), 'id': doc.id})
+                .toList());
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+        automaticallyImplyLeading: false,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         centerTitle: true,
         title: Text(
@@ -86,13 +117,23 @@ class _OrderPageState extends State<OrderPage>
           ),
         ),
         bottom: TabBar(
+          dividerColor: AppColors().transparent,
           controller: _tabController,
           labelColor: AppColors().orange,
           unselectedLabelColor: Colors.grey,
           indicatorColor: AppColors().orange,
+          labelStyle: const TextStyle(
+            fontSize: 16.5, // Text size for selected tabs
+            fontWeight: FontWeight.bold,
+          ),
+          unselectedLabelStyle: const TextStyle(
+            fontSize: 14, // Text size for unselected tabs
+            fontWeight: FontWeight.normal,
+          ),
           tabs: const [
-            Tab(text: 'Pending Requests'),
-            Tab(text: 'Orders'),
+            Tab(text: 'Pending'),
+            Tab(text: 'In progress'),
+            Tab(text: 'Completed'),
           ],
         ),
       ),
@@ -100,7 +141,9 @@ class _OrderPageState extends State<OrderPage>
         controller: _tabController,
         children: [
           _buildPendingRequestsTab(pendingRequestsStream),
-          _buildOrdersTab(ordersStream),
+          _buildOrdersTab(inProgressOrdersStream),
+          _buildOrdersTab(completedOrdersStream,
+              isCompleted: true), // ✅ تمكين النقر للطلبات المكتملة فقط
         ],
       ),
     );
@@ -174,8 +217,9 @@ class _OrderPageState extends State<OrderPage>
     );
   }
 
-  // Orders Tab
-  Widget _buildOrdersTab(Stream<List<Map<String, dynamic>>> ordersStream) {
+  // Orders and Completed Orders Tabs
+  Widget _buildOrdersTab(Stream<List<Map<String, dynamic>>> ordersStream,
+      {bool isCompleted = false}) {
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: ordersStream,
       builder: (context, snapshot) {
@@ -186,7 +230,7 @@ class _OrderPageState extends State<OrderPage>
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return Center(
             child: Text(
-              'No orders found.',
+              isCompleted ? 'No completed orders found.' : 'No orders found.',
               style: GoogleFonts.montserratAlternates(
                 fontSize: 18,
                 color: AppColors().navy,
@@ -211,6 +255,8 @@ class _OrderPageState extends State<OrderPage>
                 ? DateFormat.yMMMMd().format(sentTime.toDate())
                 : 'Unknown date';
 
+            final status = order['status'] as String? ?? 'Unknown';
+
             return ListTile(
               title: Text(
                 order['name'] as String? ?? 'No Title',
@@ -219,14 +265,52 @@ class _OrderPageState extends State<OrderPage>
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              subtitle: Text(
-                'Order ID: ${order['id']}\nStarted: $formattedDate at $formattedTime',
-                style: GoogleFonts.montserratAlternates(fontSize: 14),
+
+              subtitle: FutureBuilder<String>(
+                future: getEmployeeNameById(order['reciverId']),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Text(
+                      'Loading...',
+                      style: GoogleFonts.montserratAlternates(fontSize: 14),
+                    );
+                  } else if (snapshot.hasError) {
+                    return Text(
+                      'Error fetching name',
+                      style: GoogleFonts.montserratAlternates(
+                          fontSize: 14, color: Colors.red),
+                    );
+                  } else {
+                    return Text(
+                      'Employee Name: ${snapshot.data!}',
+                      style: GoogleFonts.montserratAlternates(fontSize: 14),
+                    );
+                  }
+                },
               ),
               trailing: Icon(
-                Icons.check_circle,
-                color: AppColors().green,
+                Icons.circle,
+                color: _getStatusColor(status),
+                size: 12,
               ),
+
+              onTap: isCompleted
+                  ? () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ReviewPage(
+                            orderId:
+                                order['id']?.toString() ?? 'Unnamed Employee',
+                            employeeId: order['reciverId']?.toString() ??
+                                'Unnamed Employee',
+                            employeeName:
+                                order['name']?.toString() ?? 'Unnamed Employee',
+                          ),
+                        ),
+                      );
+                    }
+                  : null, // لا يفعل شيئًا إذا لم يكن الطلب مكتملًا
             );
           },
         );
@@ -268,6 +352,21 @@ class _OrderPageState extends State<OrderPage>
         const SnackBar(
             content: Text('Failed to delete request. Please try again.')),
       );
+    }
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'in progress':
+        return AppColors().orange;
+      case 'completed':
+        return AppColors().green;
+      case 'assigned':
+        return AppColors().navy2;
+      case 'accepted':
+        return Colors.pink;
+      default:
+        return Colors.grey;
     }
   }
 }

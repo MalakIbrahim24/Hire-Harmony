@@ -9,7 +9,9 @@ import 'package:hire_harmony/src/controller/location_controller.dart';
 import 'package:hire_harmony/src/services/location_service.dart';
 import 'package:hire_harmony/utils/app_colors.dart';
 import 'package:hire_harmony/views/pages/customer/cus_home_page.dart';
+import 'package:hire_harmony/views/pages/customer/custom_buttom_navbar.dart';
 import 'package:hire_harmony/views/pages/employee/emp_home_page.dart';
+import 'package:hire_harmony/views/pages/employee/emp_navbar.dart';
 import 'package:hire_harmony/views/pages/welcome_page.dart';
 import 'package:http/http.dart' as http;
 
@@ -32,22 +34,19 @@ class _LocationPageState extends State<LocationPage> {
 
     if (role == 'customer') {
       Get.offAll(() =>
-          const CusHomePage()); // استبدل ClientHomePage بالصفحة المناسبة للعميل
+          const CustomButtomNavbar()); // استبدل ClientHomePage بالصفحة المناسبة للعميل
     } else if (role == 'employee') {
       Get.offAll(() =>
-          const EmpHomePage()); // استبدل UserHomePage بالصفحة المناسبة للمستخدم
+          const EmpNavbar()); // استبدل UserHomePage بالصفحة المناسبة للمستخدم
     } else {
       print('Unknown user role. Redirecting to default page.');
-      Get.offAll(() => const WelcomePage()); // صفحة افتراضية في حال وجود خطأ
+      Get.offAll(() => const WelcomePage()); 
     }
   }
 
-  /// جلب تفاصيل الموقع باستخدام Google Geocoding API
-  Future<void> fetchLocationDetails(double latitude, double longitude) async {
-    const apiKey =
-        "AIzaSyCyl4pNb6FhDky0Rad3z8GKDt4Un42ccP4"; // استخدام متغير البيئة
-    final url =
-        'https://maps.googleapis.com/maps/api/geocode/json?latlng=$latitude,$longitude&key=$apiKey';
+  Future<void> fetchLocationDetails(String latitude, String longitude) async {
+    const apiKey = "AIzaSyCyl4pNb6FhDky0Rad3z8GKDt4Un42ccP4"; 
+    final url ='https://maps.googleapis.com/maps/api/geocode/json?latlng=$latitude,$longitude&key=$apiKey';
 
     try {
       final response = await http.get(Uri.parse(url));
@@ -66,6 +65,8 @@ class _LocationPageState extends State<LocationPage> {
               country = component['long_name'];
             }
           }
+debugPrint('city ${city}');
+debugPrint('country ${country}');
 
           locationDetails.value =
               '${city ?? 'Unknown City'}, ${country ?? 'Unknown Country'}';
@@ -89,13 +90,13 @@ class _LocationPageState extends State<LocationPage> {
           .getUserLocation(controller: locationController);
 
       if (locationController.userLocation.value != null) {
-        final latitude = locationController.userLocation.value!.latitude!;
-        final longitude = locationController.userLocation.value!.longitude!;
+        final latitude = locationController.userLocation.value!.latitude!.toString();
+        final longitude = locationController.userLocation.value!.longitude!.toString();
 
         print('Latitude: $latitude, Longitude: $longitude');
 
         // جلب تفاصيل الموقع
-        await fetchLocationDetails(latitude, longitude);
+        await fetchLocationDetails(latitude.toString(), longitude.toString());
         isLocationFetched.value = true;
 
         // حفظ الإحداثيات في بيانات المستخدم

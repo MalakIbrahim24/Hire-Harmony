@@ -22,6 +22,8 @@ class _ViewEmpProfilePageState extends State<ViewEmpProfilePage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  List<String> services = []; // تخزين قائمة الخدمات
+  bool isAvailable = false; // افتراضيًا، الموظف غير متاح
 
   Map<String, dynamic>? employeeData;
   bool isFavorite = false; // Track if the employee is favorited
@@ -42,6 +44,14 @@ class _ViewEmpProfilePageState extends State<ViewEmpProfilePage>
       if (doc.exists) {
         setState(() {
           employeeData = doc.data() as Map<String, dynamic>;
+
+          // ✅ جلب قائمة الخدمات (services)
+          if (employeeData!['services'] is List) {
+            services = List<String>.from(employeeData!['services']);
+          } else {
+            services = [];
+          }
+          isAvailable = employeeData!['availability'] ?? false;
         });
       }
     } catch (e) {
@@ -172,7 +182,7 @@ class _ViewEmpProfilePageState extends State<ViewEmpProfilePage>
                                 color: AppColors().orange, size: 20),
                             const SizedBox(width: 4),
                             Text(
-                              '${employeeData!['rating']} (${employeeData!['reviews']} reviews)',
+                              '${employeeData!['rating']} (${employeeData!['reviewsNum']} reviews)',
                               style: GoogleFonts.montserratAlternates(
                                 fontSize: 14,
                                 color: Colors.grey,
@@ -207,6 +217,7 @@ class _ViewEmpProfilePageState extends State<ViewEmpProfilePage>
                     ],
                   ),
                   const SizedBox(height: 8),
+
                   Text(
                     employeeData!['about'] ??
                         'This employee has not added any description.',
@@ -216,13 +227,64 @@ class _ViewEmpProfilePageState extends State<ViewEmpProfilePage>
                     ),
                   ),
                   const SizedBox(height: 24),
+// My Services Section
+                  if (services.isNotEmpty)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 24),
+                        Text(
+                          'My Services',
+                          style: GoogleFonts.montserratAlternates(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.inversePrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8.0,
+                          runSpacing: 8.0,
+                          children: services.map((service) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                color: AppColors().orange.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                    color: AppColors().orange, width: 1),
+                              ),
+                              child: Text(
+                                service,
+                                style: GoogleFonts.montserratAlternates(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors().orange,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ),
+                  const SizedBox(height: 8),
 
                   // Tabs Section
                   TabBar(
+                    dividerColor: AppColors().transparent,
                     controller: _tabController,
                     labelColor: AppColors().orange,
                     unselectedLabelColor: Colors.grey,
                     indicatorColor: AppColors().orange,
+                    labelStyle: const TextStyle(
+                      fontSize: 16.5, // Text size for selected tabs
+                      fontWeight: FontWeight.bold,
+                    ),
+                    unselectedLabelStyle: const TextStyle(
+                      fontSize: 14, // Text size for unselected tabs
+                      fontWeight: FontWeight.normal,
+                    ),
                     tabs: const [
                       Tab(text: 'Photos'),
                       Tab(text: 'Reviews'),
@@ -267,210 +329,145 @@ class _ViewEmpProfilePageState extends State<ViewEmpProfilePage>
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  ElevatedButton(
-                    onPressed: () {
-                      // Add message button functionality here
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => Chatepage(
-                            reciverEmail: employeeData!["email"],
-                            reciverID: employeeData!["uid"],
-                            
-                          ),
-                          /*builder: (context) => BlocProvider(
-      create: (context) => ChatCubit(), // تأكد من تهيئة الكيوبت هنا
-      child: ChatPage(reciverEmail: employeeData!["email"]),*/
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 40, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                    ),
-                    child: Text(
-                      'Message',
-                      style: GoogleFonts.montserratAlternates(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  //             ElevatedButton(
-                  //               onPressed: () {
-                  //                 // Add message button functionality here
-                  //                 Navigator.push(
-                  //                   context,
-                  //                   MaterialPageRoute(
-                  //                     builder: (context) => Chatepage(
-                  //                       reciverEmail: employeeData!["email"],
-                  //                       reciverID: employeeData!["uid"],
-                  //                     ),
-                  //                     /*builder: (context) => BlocProvider(
-                  // create: (context) => ChatCubit(), // تأكد من تهيئة الكيوبت هنا
-                  // child: ChatPage(reciverEmail: employeeData!["email"]),*/
-                  //                   ),
-                  //                 );
-                  //               },
-                  //               style: ElevatedButton.styleFrom(
-                  //                 backgroundColor: Colors.orange,
-                  //                 padding: const EdgeInsets.symmetric(
-                  //                     horizontal: 40, vertical: 12),
-                  //                 shape: RoundedRectangleBorder(
-                  //                   borderRadius: BorderRadius.circular(6),
-                  //                 ),
-                  //               ),
-                  //               child: Text(
-                  //                 'Message',
-                  //                 style: GoogleFonts.montserratAlternates(
-                  //                   fontSize: 14,
-                  //                   fontWeight: FontWeight.bold,
-                  //                   color: Colors.white,
-                  //                 ),
-                  //               ),
-                  //             ),
+               
                   const SizedBox(width: 16),
                   ElevatedButton(
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (BuildContext context) {
-                          TextEditingController descriptionController =
-                              TextEditingController();
-                          TextEditingController titleController =
-                              TextEditingController();
-
-                          return AlertDialog(
-                            title: Text(
-                              'Send Request',
-                              style: GoogleFonts.montserratAlternates(
-                                  fontWeight: FontWeight.bold),
-                            ),
-                            content: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'Enter a description for your request:',
-                                  style: GoogleFonts.montserratAlternates(
-                                      fontSize: 14),
-                                ),
-                                const SizedBox(height: 8),
-                                TextField(
-                                  controller: titleController,
-                                  decoration: const InputDecoration(
-                                    hintText: 'Enter the title here',
+                    onPressed: isAvailable
+                        ? () {
+                            // ✅ يكون قابلًا للنقر فقط إذا كان الموظف متاحًا
+                            showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                TextEditingController descriptionController =
+                                    TextEditingController();
+                                TextEditingController titleController =
+                                    TextEditingController();
+                                return AlertDialog(
+                                  title: Text(
+                                    'Send Request',
+                                    style: GoogleFonts.montserratAlternates(
+                                        fontWeight: FontWeight.bold),
                                   ),
-                                  maxLines: 3,
-                                ),
-                                const SizedBox(height: 8),
-                                TextField(
-                                  controller: descriptionController,
-                                  decoration: const InputDecoration(
-                                    hintText: 'Enter your description here',
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        'Enter a description for your request:',
+                                        style: GoogleFonts.montserratAlternates(
+                                            fontSize: 14),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      TextField(
+                                        controller: titleController,
+                                        decoration: const InputDecoration(
+                                            hintText: 'Enter the title here'),
+                                        maxLines: 3,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      TextField(
+                                        controller: descriptionController,
+                                        decoration: const InputDecoration(
+                                            hintText:
+                                                'Enter your description here'),
+                                        maxLines: 3,
+                                      ),
+                                    ],
                                   ),
-                                  maxLines: 3,
-                                ),
-                              ],
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: Text(
-                                  'Cancel',
-                                  style: GoogleFonts.montserratAlternates(
-                                      color: Colors.red),
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: () async {
-                                  if (loggedInUserId == null) {
-                                    debugPrint(
-                                        'No user is currently signed in.');
-                                    Navigator.pop(context);
-                                    return;
-                                  }
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: Text('Cancel',
+                                          style:
+                                              GoogleFonts.montserratAlternates(
+                                                  color: Colors.red)),
+                                    ),
+                                    TextButton(
+                                      onPressed: () async {
+                                        if (loggedInUserId == null) {
+                                          debugPrint(
+                                              'No user is currently signed in.');
+                                          Navigator.pop(context);
+                                          return;
+                                        }
+                                        String description =
+                                            descriptionController.text.trim();
+                                        String name =
+                                            titleController.text.trim();
 
-                                  String description =
-                                      descriptionController.text.trim();
-                                  String name = titleController.text.trim();
+                                        if (description.isEmpty) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                                content: Text(
+                                                    'Description cannot be empty.')),
+                                          );
+                                          return;
+                                        }
 
-                                  if (description.isEmpty) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                          content: Text(
-                                              'Description cannot be empty.')),
-                                    );
-                                    return;
-                                  }
+                                        try {
+                                          final String requestId = _firestore
+                                              .collection('dummy')
+                                              .doc()
+                                              .id;
 
-                                  try {
-                                    // Generate a unique requestId
-                                    final String requestId =
-                                        _firestore.collection('dummy').doc().id;
+                                          final requestData = {
+                                            'requestId': requestId,
+                                            'senderId': loggedInUserId,
+                                            'receiverId': widget.employeeId,
+                                            'description': description,
+                                            'timestamp':
+                                                FieldValue.serverTimestamp(),
+                                            'status': 'pending',
+                                            'name': name,
+                                          };
 
-                                    // Define the request data
-                                    final requestData = {
-                                      'requestId': requestId,
-                                      'senderId': loggedInUserId,
-                                      'receiverId': widget.employeeId,
-                                      'description': description,
-                                      'timestamp': FieldValue.serverTimestamp(),
-                                      'status': 'pending',
-                                      'name': name,
-                                    };
+                                          await _firestore
+                                              .collection('users')
+                                              .doc(loggedInUserId)
+                                              .collection('sentRequests')
+                                              .doc(requestId)
+                                              .set(requestData);
+                                          await _firestore
+                                              .collection('users')
+                                              .doc(widget.employeeId)
+                                              .collection('recievedRequests')
+                                              .doc(requestId)
+                                              .set(requestData);
 
-                                    // Save to the customer's `sentRequests` collection
-                                    final userSentRequests = _firestore
-                                        .collection('users')
-                                        .doc(loggedInUserId)
-                                        .collection('sentRequests');
-                                    await userSentRequests
-                                        .doc(requestId)
-                                        .set(requestData);
-
-                                    // Save to the employee's `receivedRequests` collection
-                                    final employeeReceivedRequests = _firestore
-                                        .collection('users')
-                                        .doc(widget.employeeId)
-                                        .collection('recievedRequests');
-                                    await employeeReceivedRequests
-                                        .doc(requestId)
-                                        .set(requestData);
-
-                                    Navigator.pop(context); // Close the dialog
-
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                          content: Text(
-                                              'Request sent successfully!')),
-                                    );
-                                  } catch (e) {
-                                    debugPrint('Error sending request: $e');
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                          content:
-                                              Text('Failed to send request.')),
-                                    );
-                                  }
-                                },
-                                child: Text(
-                                  'Confirm',
-                                  style: GoogleFonts.montserratAlternates(
-                                      color: AppColors().orange),
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      );
-                    },
+                                          Navigator.pop(context);
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                                content: Text(
+                                                    'Request sent successfully!')),
+                                          );
+                                        } catch (e) {
+                                          debugPrint(
+                                              'Error sending request: $e');
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                                content: Text(
+                                                    'Failed to send request.')),
+                                          );
+                                        }
+                                      },
+                                      child: Text('Confirm',
+                                          style:
+                                              GoogleFonts.montserratAlternates(
+                                                  color: AppColors().orange)),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          }
+                        : null, // ❌ تعطيل الزر إذا لم يكن متاحًا
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors().orange,
+                      backgroundColor: AppColors().orange.withOpacity(
+                          isAvailable
+                              ? 1.0
+                              : 0.5), // ❌ تغيير اللون ليظهر كأنه غير نشط
                       padding: const EdgeInsets.symmetric(
                           horizontal: 40, vertical: 12),
                       shape: RoundedRectangleBorder(
@@ -481,7 +478,7 @@ class _ViewEmpProfilePageState extends State<ViewEmpProfilePage>
                       style: GoogleFonts.montserratAlternates(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: isAvailable ? Colors.white : AppColors().grey,
                       ),
                     ),
                   ),

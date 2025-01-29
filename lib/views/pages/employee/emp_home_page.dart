@@ -2,13 +2,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hire_harmony/api/firebase_api.dart';
 import 'package:hire_harmony/utils/app_colors.dart';
 import 'package:hire_harmony/views/pages/employee/advertisement_screen.dart';
 import 'package:hire_harmony/views/pages/employee/booking_screen.dart';
 import 'package:hire_harmony/views/pages/employee/contact_us_page.dart';
+import 'package:hire_harmony/views/pages/employee/display_items.dart';
 import 'package:hire_harmony/views/pages/employee/emp_notifications_page.dart';
 import 'package:hire_harmony/views/pages/employee/tickets_page.dart';
 import 'package:hire_harmony/views/pages/location_page.dart';
@@ -24,14 +24,13 @@ class EmpHomePage extends StatefulWidget {
 class _EmpHomePageState extends State<EmpHomePage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   String userName = "User"; // Default user name
-    final String? userId = FirebaseAuth.instance.currentUser?.uid;
+  final String? userId = FirebaseAuth.instance.currentUser?.uid;
 
- @override
+  @override
   void initState() {
     super.initState();
     _checkUserLocation();
     fetchUserName(); // Fetch user name when the page initializes
-
   }
 
   Future<void> _checkUserLocation() async {
@@ -40,26 +39,10 @@ class _EmpHomePageState extends State<EmpHomePage> {
     // افترض أن لديك Firebase API تتحقق من الموقع
     final isLocationSaved = await FirebaseApi().isUserLocationSaved(userId!);
 
- if (!isLocationSaved) {
-  // تحويل المستخدم إلى صفحة الموقع باستخدام GetX
-  await Get.to(() => const LocationPage());
-}
-
-  }
-  Future<String?> _fetchEmployeeState(String userId) async {
-    try {
-      final DocumentSnapshot userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .get();
-
-      if (userDoc.exists) {
-        return userDoc['state'] as String?;
-      }
-    } catch (e) {
-      debugPrint("Error fetching employee state: $e");
+    if (!isLocationSaved) {
+      // تحويل المستخدم إلى صفحة الموقع باستخدام GetX
+      await Get.to(() => const LocationPage());
     }
-    return null;
   }
 
   Future<void> fetchUserName() async {
@@ -82,8 +65,6 @@ class _EmpHomePageState extends State<EmpHomePage> {
       debugPrint("Error fetching user name: $e");
     }
   }
-
-  
 
   @override
   Widget build(BuildContext context) {
@@ -179,7 +160,6 @@ class _EmpHomePageState extends State<EmpHomePage> {
                   children: [
                     OverviewCard(
                       title: 'Booking',
-                      
                       icon: Icons.book_online,
                       onTap: () {
                         Navigator.push(
@@ -189,8 +169,8 @@ class _EmpHomePageState extends State<EmpHomePage> {
                           ),
                         );
                       },
-                      cardColor: AppColors().lightblue,
-                      iconColor: AppColors().orange,
+                      cardColor: AppColors().orangelight,
+                      iconColor: AppColors().navy,
                     ),
                     OverviewCard(
                       title: 'Post Ad',
@@ -217,8 +197,22 @@ class _EmpHomePageState extends State<EmpHomePage> {
                           ),
                         );
                       },
-                      cardColor: AppColors().lightblue,
-                      iconColor: AppColors().orange,
+                      cardColor: AppColors().orangelight,
+                      iconColor: AppColors().navy,
+                    ),
+                    OverviewCard(
+                      title: 'Items',
+                      icon: Icons.living_outlined,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const DisplayItems(),
+                          ),
+                        );
+                      },
+                      cardColor: AppColors().orangelight,
+                      iconColor: AppColors().navy,
                     ),
                     OverviewCard(
                       title: 'Tickets',
@@ -237,7 +231,7 @@ class _EmpHomePageState extends State<EmpHomePage> {
                   ],
                 ),
                 const SizedBox(height: 20),
-                const PrevWork(),
+                const SafeArea(child: PrevWork()),
                 const SizedBox(height: 10),
               ],
             ),
@@ -287,7 +281,8 @@ class OverviewCard extends StatelessWidget {
                   Text(
                     title,
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.montserratAlternates(fontSize: 14),
+                    style: GoogleFonts.montserratAlternates(
+                        fontSize: 14, color: AppColors().navy),
                   ),
                 ],
               ),

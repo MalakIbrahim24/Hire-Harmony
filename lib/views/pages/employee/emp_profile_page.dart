@@ -7,6 +7,7 @@ import 'package:hire_harmony/utils/app_colors.dart';
 import 'package:hire_harmony/utils/route/app_routes.dart';
 import 'package:hire_harmony/view_models/cubit/auth_cubit.dart';
 import 'package:hire_harmony/views/pages/employee/emp_profile_edit_page.dart';
+import 'package:hire_harmony/views/pages/map_page.dart';
 import 'package:hire_harmony/views/pages/settings_page.dart';
 import 'package:hire_harmony/views/widgets/customer/state_item.dart';
 import 'package:hire_harmony/views/widgets/employee/emp_build_menu_container.dart';
@@ -86,10 +87,10 @@ class _EmpProfilePageState extends State<EmpProfilePage> {
         }
         return SafeArea(
           child: Scaffold(
-          backgroundColor:Theme.of(context).colorScheme.surface,
+            backgroundColor: Theme.of(context).colorScheme.surface,
             appBar: AppBar(
               automaticallyImplyLeading: false,
-          backgroundColor:Theme.of(context).colorScheme.surface,
+              backgroundColor: Theme.of(context).colorScheme.surface,
               elevation: 0,
               centerTitle: true,
               actions: [
@@ -154,17 +155,28 @@ class _EmpProfilePageState extends State<EmpProfilePage> {
                 ),
                 const SizedBox(height: 20),
                 Expanded(
-                  
                   child: SingleChildScrollView(
-                    child: Column(
-                      children: [
+                    child: Column(children: [
                       EmpBuildMenuContainer(
                         title: 'Profile',
                         icon: Icons.person,
                         onTap: () {
                           Navigator.pushNamed(
                               context,
-                              AppRoutes.empProfileInfoPage); // Refresh data on return
+                              AppRoutes
+                                  .empProfileInfoPage); // Refresh data on return
+                        },
+                      ),
+                      EmpBuildMenuContainer(
+                        title: 'Map',
+                        icon: Icons.person,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => MapPage(),
+                            ),
+                          );
                         },
                       ),
                       EmpBuildMenuContainer(
@@ -186,12 +198,12 @@ class _EmpProfilePageState extends State<EmpProfilePage> {
                         title: 'Setting',
                         icon: Icons.settings,
                         onTap: () {
-                           Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const SettingsPage(),
-                                    ),
-                                  );
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SettingsPage(),
+                            ),
+                          );
                         },
                       ),
                       EmpBuildMenuContainer(
