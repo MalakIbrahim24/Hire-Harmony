@@ -32,7 +32,7 @@ class BestWorker extends StatelessWidget {
     });
 
     return SizedBox(
-      height: 200, // Increased height for larger circles
+      height: 250, // 🔹 ارتفاع مناسب
       child: StreamBuilder<List<Map<String, dynamic>>>(
         stream: bestWorkersStream,
         builder: (context, snapshot) {
@@ -67,10 +67,11 @@ class BestWorker extends StatelessWidget {
                   final workerName = userInfo['name'] ?? 'Unknown Worker';
                   final workerImg = userInfo['img'] ?? '';
                   final workerServNum = bestWorker['data']['servNum'] ?? '0';
+                  final double rating = double.tryParse(userInfo['rating']?.toString() ?? '0.0') ?? 0.0;
+                  final int reviewsNum = int.tryParse(userInfo['reviewsNum']?.toString() ?? '0') ?? 0;
 
                   return InkWell(
                     onTap: () {
-                      // Navigate to ViewEmpProfilePage
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -80,64 +81,131 @@ class BestWorker extends StatelessWidget {
                         ),
                       );
                     },
-                    borderRadius: BorderRadius.circular(
-                        8), // Match the container's border radius
+                    borderRadius: BorderRadius.circular(15),
                     child: Container(
                       width: 200,
-                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      height: 220, // 🔹 تم تقليل الارتفاع لحذف الفراغ
+                      margin: const EdgeInsets.symmetric(horizontal: 10),
                       decoration: BoxDecoration(
-                        color: AppColors().white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors().navy),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha(100),
+                            blurRadius: 10,
+                            spreadRadius: 2,
+                          ),
+                        ],
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            CircleAvatar(
-                              radius: 50, // Adjust the radius for size
-                              backgroundImage: workerImg.isNotEmpty
-                                  ? NetworkImage(workerImg)
-                                  : null, // Load image if URL is provided
-                              backgroundColor:
-                                  AppColors().navy, // Background color
-                              onBackgroundImageError: (error, stackTrace) {
-                                // Handle image load errors
-                                print('Image load error: $error');
-                              },
-                              child: workerImg.isEmpty
-                                  ? Icon(
-                                      Icons.person, // Fallback icon
-                                      size: 50,
-                                      color: AppColors().white,
-                                    )
-                                  : null,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min, // 🔹 منع التمدد غير الضروري
+                        children: [
+                          // 🔹 الجزء العلوي: خلفية برتقالية مع صورة العامل
+                          Container(
+                            decoration: BoxDecoration(
+                              color: AppColors().orange,
+                              borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
                             ),
-                            const SizedBox(height: 10),
-                            Text(
-                              workerName,
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.montserratAlternates(
-                                textStyle: TextStyle(
-                                  fontSize: 14,
-                                  color: AppColors().navy,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Column(
+                                children: [
+                                  const SizedBox(height: 8),
+                                  Center(
+                                    child: CircleAvatar(
+                                      radius: 35,
+                                      backgroundColor: Colors.white,
+                                      backgroundImage: workerImg.isNotEmpty
+                                          ? NetworkImage(workerImg)
+                                          : null,
+                                      child: workerImg.isEmpty
+                                          ? Icon(Icons.person, size: 35, color: Colors.grey[600])
+                                          : null,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 5),
+                                  Text(
+                                    workerName,
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.montserratAlternates(
+                                      textStyle: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors().white,
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    'Services: $workerServNum',
+                                    style: GoogleFonts.montserratAlternates(
+                                      textStyle: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 5),
-                            Text(
-                              'Services: $workerServNum',
-                              style: GoogleFonts.montserratAlternates(
-                                textStyle: TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors().grey,
+                          ),
+
+                          const SizedBox(height: 8), // 🔹 تحسين التباعد بين القسمين
+
+                          // 🔹 عدد التقييمات والمراجعات
+                          Container(
+                            height: 60, // 🔹 تحديد ارتفاع مناسب لمنع الفراغ
+                            alignment: Alignment.center,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Flexible(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min, // 🔹 منع التمدد غير الضروري
+                                    children: [
+                                      Text(
+                                        rating.toStringAsFixed(1),
+                                        style: GoogleFonts.montserratAlternates(
+                                          textStyle: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors().navy,
+                                          ),
+                                        ),
+                                      ),
+                                      const Text(
+                                        "Rating",
+                                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
+                                Flexible(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min, // 🔹 منع التمدد غير الضروري
+                                    children: [
+                                      Text(
+                                        reviewsNum.toString(),
+                                        style: GoogleFonts.montserratAlternates(
+                                          textStyle: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors().navy,
+                                          ),
+                                        ),
+                                      ),
+                                      const Text(
+                                        "Reviews",
+                                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   );

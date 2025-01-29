@@ -141,6 +141,12 @@ class _EmpProfileInfoPageState extends State<EmpProfileInfoPage>
       });
 
       debugPrint('Service added successfully');
+      // 🔹 تحديث `servNum` في `bestworker`
+      await _firestore.collection('bestworker').doc(user.uid).update({
+        'servNum': services.length.toString(),
+      });
+
+      debugPrint('✅ servNum updated in bestworker: ${services.length}');
     } catch (e) {
       debugPrint('Error adding service: $e');
     }
@@ -166,6 +172,12 @@ class _EmpProfileInfoPageState extends State<EmpProfileInfoPage>
       });
 
       debugPrint('Service deleted successfully');
+      // 🔹 تحديث `servNum` في `bestworker`
+      await _firestore.collection('bestworker').doc(user.uid).update({
+        'servNum': services.length.toString(),
+      });
+
+      debugPrint('✅ servNum updated in bestworker: ${services.length}');
     } catch (e) {
       debugPrint('Error deleting service: $e');
     }
@@ -249,8 +261,16 @@ class _EmpProfileInfoPageState extends State<EmpProfileInfoPage>
           services = (data['services'] is List)
               ? List<String>.from(data['services'])
               : [];
+
           isAvailable = data['availability'] ?? true;
         });
+// تحديث `servNum` في `bestworker` عند تحميل البيانات
+        await _firestore.collection('bestworker').doc(user.uid).update({
+          'servNum': services.length.toString(),
+        });
+        
+
+        debugPrint('✅ servNum updated on data fetch: ${services.length}');
 
         debugPrint("Fetched Employee ID: $id");
       } else {
@@ -277,8 +297,7 @@ class _EmpProfileInfoPageState extends State<EmpProfileInfoPage>
             'rating': reviewData['rating']?.toString() ?? '0.0',
             'date': reviewData['date']?.toString() ?? '',
             'review': reviewData['review']?.toString() ?? '',
-            'image': reviewData['image']?.toString() ??
-                'https://via.placeholder.com/50',
+            'image': reviewData['image']?.toString() ??'https://via.placeholder.com/50',
           };
         }).toList();
         isLoading = false;

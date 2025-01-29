@@ -98,23 +98,23 @@ class _ReviewPageState extends State<ReviewPage> {
           .doc(reviewId)
           .set(reviewData);
 
-        
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('completedOrders')
+          .doc(widget.orderId)
+          .update({
+        'reviewed': true, // ✅ تحديث حالة الطلب ليصبح مراجعًا
+      });
 
-await _firestore.collection('users')
-    .doc(userId)
-    .collection('completedOrders')
-    .doc(widget.orderId)
-    .update({
-  'reviewed': true, // ✅ تحديث حالة الطلب ليصبح مراجعًا
-});
-
-await _firestore.collection('users')
-    .doc(widget.employeeId)
-    .collection('completedOrders')
-    .doc(widget.orderId)
-    .update({
-  'reviewed': true, // ✅ تحديث حالة الطلب ليصبح مراجعًا
-});
+      await _firestore
+          .collection('users')
+          .doc(widget.employeeId)
+          .collection('completedOrders')
+          .doc(widget.orderId)
+          .update({
+        'reviewed': true, // ✅ تحديث حالة الطلب ليصبح مراجعًا
+      });
 
       // **تحويل `reviewsNum` و `rating` إلى أرقام وإعادة حساب المتوسط**
       int totalReviews =
@@ -133,7 +133,8 @@ await _firestore.collection('users')
       await _firestore.collection('users').doc(widget.employeeId).set(
           {
             'reviewsNum': totalReviews.toString(), // تخزين العدد كنص
-            'rating': newAverageRating.toStringAsFixed(1), // تخزين الريتينج بفاصلة عشرية واحدة كنص
+            'rating': newAverageRating
+                .toStringAsFixed(1), // تخزين الريتينج بفاصلة عشرية واحدة كنص
           },
           SetOptions(
               merge: true)); // **استخدام `merge` لتجنب فقدان البيانات الأخرى**
