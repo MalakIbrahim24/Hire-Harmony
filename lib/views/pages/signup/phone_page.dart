@@ -31,6 +31,94 @@ class _PhonePageState extends State<PhonePage> {
   bool isSendOtpButtonEnabled = false;
   String verificationId = "";
 
+Future<void> updateCategoryWorkerCounts() async {
+  FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+  // استرجاع جميع الكاتيجوري
+  QuerySnapshot categoriesSnapshot =
+      await firestore.collection('categories').get();
+
+  // خريطة لحفظ عدد العمال لكل كاتيجوري
+  Map<String, int> categoryWorkerCount = {};
+
+  // تحضير جميع الكاتيجوري من قاعدة البيانات
+  for (var categoryDoc in categoriesSnapshot.docs) {
+    String categoryId = categoryDoc.id;
+    categoryWorkerCount[categoryId] = 0; // تعيين العدد مبدئيًا 0
+  }
+
+  // استرجاع جميع المستخدمين
+  QuerySnapshot usersSnapshot = await firestore.collection('users').get();
+
+  for (var userDoc in usersSnapshot.docs) {
+    String userId = userDoc.id;
+
+    // جلب كوليكشن `empcategories` لكل مستخدم
+    QuerySnapshot empCategoriesSnapshot = await firestore
+        .collection('users')
+        .doc(userId)
+        .collection('empcategories')
+        .get();
+
+    if (empCategoriesSnapshot.docs.isEmpty) {
+      print("❌ المستخدم $userId ليس لديه أي كاتيجوري في empcategories");
+    } else {
+      print("✅ المستخدم $userId لديه ${empCategoriesSnapshot.docs.length} كاتيجوري في empcategories");
+    }
+
+    for (var empCategoryDoc in empCategoriesSnapshot.docs) {
+      Map<String, dynamic> categoryData =
+          empCategoryDoc.data() as Map<String, dynamic>;
+
+      if (!categoryData.containsKey('categories')) {
+        print("⚠️ تحذير: الوثيقة ${empCategoryDoc.id} في `empcategories` لا تحتوي على حقل 'categories'");
+        continue;
+      }
+
+      List<dynamic> categoryNames = categoryData['categories'] ?? [];
+
+      if (categoryNames.isEmpty) {
+        print("⚠️ تحذير: قائمة الكاتيجوري فارغة للمستخدم $userId");
+        continue;
+      }
+
+      // التكرار على كل الكاتيجوري التي ينتمي إليها العامل
+      for (String categoryName in categoryNames) {
+        categoryName = categoryName.trim(); // إزالة أي مسافات زائدة
+
+        print("🔍 المستخدم $userId ينتمي إلى الكاتيجوري: $categoryName");
+
+        // البحث عن كاتيجوري بهذا الاسم في القائمة
+        for (var categoryDoc in categoriesSnapshot.docs) {
+          Map<String, dynamic> categoryDocData =
+              categoryDoc.data() as Map<String, dynamic>;
+
+          String categoryDocName = categoryDocData['name']?.toString().trim() ?? '';
+
+          if (categoryDocName == categoryName) {
+            String categoryId = categoryDoc.id;
+            categoryWorkerCount[categoryId] =
+                (categoryWorkerCount[categoryId] ?? 0) + 1;
+            print("✅ تم إضافة المستخدم $userId إلى الكاتيجوري $categoryDocName (ID: $categoryId)");
+          }
+        }
+      }
+    }
+  }
+
+  // طباعة النتائج للتحقق من التعداد
+  print("🔹 عدد العمال لكل كاتيجوري: $categoryWorkerCount");
+
+  // تحديث كل كاتيجوري بعدد العمال المرتبطين بها
+  for (var entry in categoryWorkerCount.entries) {
+    await firestore.collection('categories').doc(entry.key).update({
+      'empNum': entry.value,
+    });
+  }
+
+  print("✅ تم تحديث أعداد العمال لكل كاتيجوري بنجاح!");
+}
+
   // Validate phone number format (basic validation)
   bool isValidPhoneNumber(String phoneNumber) {
     final phoneRegex =
@@ -217,7 +305,7 @@ class _PhonePageState extends State<PhonePage> {
           .add({
         'categories': categories,
       });
-
+updateCategoryWorkerCounts();
       // Navigate to the success page
       if (!mounted) return;
       Navigator.pushNamed(context, AppRoutes.empVerificationSuccessPage);

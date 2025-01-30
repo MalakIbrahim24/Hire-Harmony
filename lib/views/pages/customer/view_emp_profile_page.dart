@@ -8,6 +8,7 @@ import 'package:hire_harmony/views/pages/chatePage.dart';
 //import 'package:hire_harmony/views/pages/chatePage.dart';
 import 'package:hire_harmony/views/pages/employee/reviews_page.dart';
 import 'package:hire_harmony/views/widgets/customer/cus_photo_tab_view.dart';
+import 'package:hire_harmony/views/widgets/employee/reviews_tab_view.dart';
 
 class ViewEmpProfilePage extends StatefulWidget {
   final String employeeId;
@@ -298,7 +299,7 @@ class _ViewEmpProfilePageState extends State<ViewEmpProfilePage>
                         CusPhotoTabView(
                           employeeId: widget.employeeId,
                         ),
-                        ReviewsPage(
+                        ReviewsTapView(
                           employeeId: widget.employeeId,
                         ),
                       ],

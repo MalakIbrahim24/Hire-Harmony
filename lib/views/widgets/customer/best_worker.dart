@@ -57,7 +57,7 @@ class _BestWorkerState extends State<BestWorker> {
     final Stream<List<Map<String, dynamic>>> bestWorkersStream =fetchTopWorkers();
 
     return SizedBox(
-      height: 250,
+      height: 300,
       child: StreamBuilder<List<Map<String, dynamic>>>(
         stream: bestWorkersStream,
         builder: (context, snapshot) {
@@ -106,7 +106,7 @@ class WorkerCard extends StatelessWidget {
       child: Container(
         width: 220,
         height: 270, // 🔹 تثبيت ارتفاع البطاقة
-        margin: const EdgeInsets.symmetric(horizontal: 12),
+        margin: const EdgeInsets.symmetric(horizontal: 12,vertical: 8),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),

@@ -138,7 +138,9 @@ class _ViewAllCategoriesPageState extends State<ViewAllCategoriesPage> {
                               MaterialPageRoute(
                                 builder: (context) =>
                                     EmployeesUnderCategoryPage(
-                                        categoryId: categoryId),
+                                  categoryName: category[
+                                      'name'], // تمرير اسم الفئة الصحيح
+                                ),
                               ),
                             );
                           },

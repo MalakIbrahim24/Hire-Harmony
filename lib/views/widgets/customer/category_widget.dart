@@ -51,13 +51,15 @@ class _CategoryWidgetState extends State<CategoryWidget> {
                     context,
                     MaterialPageRoute(
                       builder: (context) => EmployeesUnderCategoryPage(
-                        categoryId: categoryId,
+                        categoryName:
+                            category['name'], // تمرير اسم الفئة الصحيح
                       ),
                     ),
                   );
                 },
                 child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 8 , vertical: 8 ),
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   width: 160, // زيادة العرض قليلاً لتحسين تناسق النصوص
@@ -65,13 +67,10 @@ class _CategoryWidgetState extends State<CategoryWidget> {
                     color: AppColors().white,
                     borderRadius:
                         BorderRadius.circular(16), // جعل الحواف أكثر نعومة
-                   
 
-                   
                     boxShadow: [
                       BoxShadow(
-                        color:
-                            AppColors().navy.withAlpha(230), // إضافة ظل خفيف
+                        color: AppColors().navy.withAlpha(150), // إضافة ظل خفيف
                         blurRadius: 6, // تقليل التمويه لإبقاء الظل ناعمًا
                         offset: const Offset(0, 4), // تحديد اتجاه الظل
                       ),

@@ -5,49 +5,61 @@ import 'package:hire_harmony/utils/app_colors.dart';
 import 'package:hire_harmony/views/pages/customer/view_emp_profile_page.dart';
 
 class EmployeesUnderCategoryPage extends StatelessWidget {
-  final String categoryId;
+  final String categoryName; // اسم الفئة وليس الـ ID
 
-  const EmployeesUnderCategoryPage({required this.categoryId, super.key});
+  const EmployeesUnderCategoryPage({required this.categoryName, super.key});
 
-  Future<List<Map<String, dynamic>>> fetchEmployees(String categoryId) async {
-    final usersCollection = FirebaseFirestore.instance.collection('users');
-    final userDocs = await usersCollection.get();
+  Future<List<Map<String, dynamic>>> fetchEmployees(String categoryName) async {
+  final usersCollection = FirebaseFirestore.instance.collection('users');
+  final userDocs = await usersCollection.get();
 
-    final filteredUsers = <Map<String, dynamic>>[];
+  final filteredUsers = <Map<String, dynamic>>[];
 
-    debugPrint("Selected categoryId: $categoryId");
+  debugPrint("🔍 Searching for category: $categoryName");
 
-    for (final userDoc in userDocs.docs) {
-      final empCategoriesCollection =
-          userDoc.reference.collection('empcategories');
-      final matchingCategory = await empCategoriesCollection
-          .doc(categoryId) // Use categoryId to match document ID
-          .get();
+  for (final userDoc in userDocs.docs) {
+    final empCategoriesCollection = userDoc.reference.collection('empcategories');
+    final empCategoryDocs = await empCategoriesCollection.get();
 
-      if (matchingCategory.exists) {
+    for (final empCategoryDoc in empCategoryDocs.docs) {
+      final List<dynamic>? categories = empCategoryDoc.data()['categories']; // جلب الأراي
+      
+      debugPrint("👤 Checking User: ${userDoc.id} - Categories: $categories");
+
+      if (categories != null && categories.contains(categoryName)) {
         final userData = userDoc.data();
-        userData['uid'] = userDoc.id; // Add employee ID to the data
+        userData['uid'] = userDoc.id; // إضافة معرف المستخدم
         filteredUsers.add(userData);
       }
     }
-
-    return filteredUsers;
   }
+
+  debugPrint("✅ Found ${filteredUsers.length} employees for category: $categoryName");
+
+  return filteredUsers;
+}
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Employees for Category',
+          'Employees for $categoryName',
           style: GoogleFonts.montserratAlternates(
             color: AppColors().white,
           ),
         ),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: AppColors().white),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
         backgroundColor: AppColors().orange,
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: fetchEmployees(categoryId),
+        future: fetchEmployees(categoryName),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -75,20 +87,17 @@ class EmployeesUnderCategoryPage extends StatelessWidget {
 
               return Card(
                 margin: const EdgeInsets.symmetric(
-                vertical: 8.0, horizontal: 12.0), // تقليل المسافات الخارجية
-                elevation: 3, // إضافة ظل خفيف للكارد
+                    vertical: 8.0, horizontal: 12.0),
+                elevation: 3,
                 shape: RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(10), // زوايا دائرية للكارد
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Padding(
-                  padding:
-                      const EdgeInsets.all(12.0), // تقليل المسافات داخل الكارد
+                  padding: const EdgeInsets.all(12.0),
                   child: Row(
                     children: [
-                      // صورة أو أيقونة العامل
                       CircleAvatar(
-                        radius: 30, // حجم الصورة
+                        radius: 30,
                         backgroundImage: employeeImg.isNotEmpty
                             ? NetworkImage(employeeImg)
                             : null,
@@ -97,8 +106,7 @@ class EmployeesUnderCategoryPage extends StatelessWidget {
                             ? const Icon(Icons.person, color: Colors.white)
                             : null,
                       ),
-                      const SizedBox(width: 12), // مسافة بين الصورة والنصوص
-                      // النصوص
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -115,7 +123,7 @@ class EmployeesUnderCategoryPage extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Email: $employeeEmail', // نص يعرض البريد الإلكتروني
+                              'Email: $employeeEmail',
                               style: GoogleFonts.montserratAlternates(
                                 textStyle: TextStyle(
                                   fontSize: 10,
@@ -126,7 +134,6 @@ class EmployeesUnderCategoryPage extends StatelessWidget {
                           ],
                         ),
                       ),
-                      // زر عرض الملف الشخصي
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors().orange,
@@ -142,7 +149,7 @@ class EmployeesUnderCategoryPage extends StatelessWidget {
                               context,
                               MaterialPageRoute(
                                 builder: (context) => ViewEmpProfilePage(
-                                  employeeId: employeeId, // تمرير معرف العامل
+                                  employeeId: employeeId,
                                 ),
                               ),
                             );
