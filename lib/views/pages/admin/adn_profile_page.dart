@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -19,6 +20,36 @@ class AdnProfilePage extends StatefulWidget {
 
 class _AdnProfilePageState extends State<AdnProfilePage> {
   final AuthServices authServices = AuthServicesImpl();
+  String? adminImageUrl;
+  String adminName = "Admin";
+
+  @override
+  void initState() {
+    super.initState();
+    fetchAdminData();
+  }
+
+  Future<void> fetchAdminData() async {
+    try {
+      final String adminUid = authServices.getCurrentUser()?.uid ?? '';
+      if (adminUid.isEmpty) return;
+
+      final DocumentSnapshot adminSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(adminUid)
+          .get();
+
+      if (adminSnapshot.exists) {
+        final adminData = adminSnapshot.data() as Map<String, dynamic>;
+        setState(() {
+          adminImageUrl = adminData['img'] as String? ?? '';
+          adminName = adminData['name'] as String? ?? 'Admin';
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching admin data: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,8 +69,6 @@ class _AdnProfilePageState extends State<AdnProfilePage> {
               ),
             );
           } else if (state is AuthInitial) {
-            // Navigator.of(context).pop();
-            // root navigator is better to use here because of the bottom navBar
             Navigator.of(context, rootNavigator: true)
                 .pushReplacementNamed(AppRoutes.loginPage);
           }
@@ -82,17 +111,23 @@ class _AdnProfilePageState extends State<AdnProfilePage> {
                         borderRadius: const BorderRadius.vertical(
                           bottom: Radius.circular(180),
                         ),
-                        image: const DecorationImage(
-                          image:
-                              AssetImage('lib/assets/images/adminmalak.jpeg'),
-                          fit: BoxFit.cover,
-                        ),
+                        image: adminImageUrl != null &&
+                                adminImageUrl!.isNotEmpty
+                            ? DecorationImage(
+                                image: NetworkImage(adminImageUrl!),
+                                fit: BoxFit.cover,
+                              )
+                            : const DecorationImage(
+                                image:
+                                    AssetImage('lib/assets/images/noimg.jpg'),
+                                fit: BoxFit.cover,
+                              ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    'Malak Ibrahim',
+                    adminName,
                     style: GoogleFonts.montserratAlternates(
                       fontSize: 28,
                       color: AppColors().white,
@@ -112,6 +147,14 @@ class _AdnProfilePageState extends State<AdnProfilePage> {
                             },
                           ),
                           AdnProfileContainer(
+                            icon: Icons.warning_amber_outlined,
+                            title: 'Complaints',
+                            onTap: () {
+                              Navigator.pushNamed(
+                                  context, AppRoutes.complaintsPage);
+                            },
+                          ),
+                          AdnProfileContainer(
                             icon: Icons.account_tree_outlined,
                             title: 'Employee Maintenance',
                             onTap: () {
@@ -128,11 +171,11 @@ class _AdnProfilePageState extends State<AdnProfilePage> {
                             },
                           ),
                           AdnProfileContainer(
-                            icon: Icons.logout_outlined,
                             title: 'Logout',
-                            onTap: () async {
-                              await authCubit.signOut();
-                            },
+  icon: Icons.logout,
+  onTap: () async {
+    await authCubit.signOut(context);
+  },
                           ),
                           const SizedBox(
                             height: 80,

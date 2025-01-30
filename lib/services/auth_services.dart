@@ -66,6 +66,7 @@ User? getCurrentUser(){
 
   @override
   Future<void> signOut() async {
+    
     await firebaseAuth.signOut();
   }
 

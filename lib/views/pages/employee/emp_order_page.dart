@@ -5,9 +5,36 @@ import 'package:hire_harmony/utils/app_colors.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 
-class EmpOrderPage extends StatelessWidget {
+class EmpOrderPage extends StatefulWidget {
 
   const EmpOrderPage({super.key });
+
+  @override
+  State<EmpOrderPage> createState() => _EmpOrderPageState();
+}
+
+class _EmpOrderPageState extends State<EmpOrderPage> {
+  @override
+void initState() {
+  super.initState();
+
+}
+
+
+
+Future<void> _updateCompletedOrdersCount(String workerId) async {
+  final workerRef = FirebaseFirestore.instance.collection('users').doc(workerId);
+
+  // جلب عدد الطلبات المكتملة الفعلي من الـ subcollection
+  final completedOrdersRef = workerRef.collection('completedOrders');
+  final completedOrdersSnapshot = await completedOrdersRef.get();
+  int completedOrdersCount = completedOrdersSnapshot.size; // استخدام size بدل docs.length
+
+  // تحديث العدد في الـ user document
+  await workerRef.update({'completedOrdersCount': completedOrdersCount});
+
+  print('✅ تم تحديث completedOrdersCount إلى: $completedOrdersCount للعامل $workerId');
+}
 
   Future<void> _markOrderAsCompleted(
       BuildContext context,
@@ -61,7 +88,8 @@ class EmpOrderPage extends StatelessWidget {
       await firestore.collection('chat_rooms').doc(chatId).update({
         'chatController': 'closed',
       });
-
+ // 🔹 تحديث عدد الطلبات المكتملة للعامل بعد إتمام العملية
+await _updateCompletedOrdersCount(employeeId);
       // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -69,6 +97,8 @@ class EmpOrderPage extends StatelessWidget {
           backgroundColor: Colors.green,
         ),
       );
+          print('✅ تم اكتمال الطلب وتحديث العداد للعامل: $employeeId');
+
     } catch (e) {
       // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
@@ -340,7 +370,6 @@ class EmpOrderPage extends StatelessWidget {
       },
     );
   }
-
 
   Widget _buildOrdersTabCom(
     String loggedInUserId,

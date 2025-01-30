@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hire_harmony/utils/app_colors.dart';
@@ -7,11 +8,19 @@ class ContactUsPage extends StatefulWidget {
   const ContactUsPage({super.key});
 
   @override
-  // ignore: library_private_types_in_public_api
   _ContactUsPageState createState() => _ContactUsPageState();
 }
 
 class _ContactUsPageState extends State<ContactUsPage> {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  Stream<QuerySnapshot> fetchAdmins() {
+    return _firestore
+        .collection('users')
+        .where('role', isEqualTo: 'admin')
+        .snapshots();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -51,7 +60,7 @@ class _ContactUsPageState extends State<ContactUsPage> {
             ),
             const SizedBox(height: 7),
             Text(
-              "Teams",
+              "Admins",
               style: TextStyle(
                 fontSize: 16,
                 color: Theme.of(context).colorScheme.primary,
@@ -59,27 +68,48 @@ class _ContactUsPageState extends State<ContactUsPage> {
             ),
             const SizedBox(height: 18),
             Expanded(
-              child: ListView(
-                children: [
-                  buildDeveloperCard(
-                    context,
-                    name: "Raghad Ammar",
-                    role: "UI-UX Designer",
-                    image: 'assets/images/woman.png',
-                  ),
-                  buildDeveloperCard(
-                    context,
-                    name: "Haneen Yousif",
-                    role: "Frontend Developer",
-                    image: 'assets/images/gamer.png',
-                  ),
-                  buildDeveloperCard(
-                    context,
-                    name: "Malak Ibrahem",
-                    role: "Backend Developer",
-                    image: 'assets/images/woman.png',
-                  ),
-                ],
+              child: StreamBuilder<QuerySnapshot>(
+                stream: fetchAdmins(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    return const Center(
+                      child: Text(
+                        "No admins found",
+                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                      ),
+                    );
+                  }
+
+                  final adminUsers = snapshot.data!.docs;
+
+                  return ListView.builder(
+                    itemCount: adminUsers.length,
+                    itemBuilder: (context, index) {
+                      final adminData =
+                          adminUsers[index].data() as Map<String, dynamic>;
+
+                      final adminName = adminData['name'] ?? 'Unknown Admin';
+                      final adminRole = adminData['role'] ?? 'Admin';
+                      final adminImage = adminData['img'] ??
+                          'https://thumbs.dreamstime.com/b/default-avatar-profile-icon-vector-social-media-user-image-182145777.jpg';
+                      final adminId = adminUsers[index].id;
+                      final adminJob = adminData['job'] ?? 'New Admin';
+
+                      return buildAdminCard(
+                        context,
+                        name: adminName,
+                        role: adminRole,
+                        image: adminImage,
+                        adminId: adminId,
+                        adminJob: adminJob,
+                      );
+                    },
+                  );
+                },
               ),
             ),
             Padding(
@@ -99,31 +129,33 @@ class _ContactUsPageState extends State<ContactUsPage> {
     );
   }
 
-  Widget buildDeveloperCard(BuildContext context,
-      {required String name, required String role, required String image}) {
+  Widget buildAdminCard(BuildContext context,
+      {required String name,
+      required String role,
+      required String image,
+      required String adminId,
+      required String adminJob}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-          horizontal: 14.0, vertical: 8.0), // تقليل المسافات الخارجية قليلًا
+      padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 8.0),
       child: Container(
-        height: 140, // حجم متوسط للصندوق
+        height: 140,
         decoration: BoxDecoration(
-          color: AppColors().orange, // خلفية الصندوق برتقالية
+          color: AppColors().orange,
           border: Border.all(color: AppColors().orangelight, width: 1),
           borderRadius: BorderRadius.circular(14.0),
         ),
         child: Column(
-          mainAxisAlignment:
-              MainAxisAlignment.center, // توسيط المحتوى داخل الصندوق
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 CircleAvatar(
-                  radius: 40, // حجم متوسط للصورة
-                  backgroundImage: AssetImage(image),
+                  radius: 40,
+                  backgroundImage: NetworkImage(image),
                 ),
-                const SizedBox(width: 50), // تقليل المسافة بين الصورة والنصوص
+                const SizedBox(width: 50),
                 Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -132,7 +164,7 @@ class _ContactUsPageState extends State<ContactUsPage> {
                       name,
                       style: GoogleFonts.montserratAlternates(
                         textStyle: TextStyle(
-                          fontSize: 17, // حجم نص متوسط
+                          fontSize: 17,
                           color: AppColors().white,
                           fontWeight: FontWeight.bold,
                         ),
@@ -140,18 +172,16 @@ class _ContactUsPageState extends State<ContactUsPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      role,
+                      adminJob,
                       style: GoogleFonts.montserratAlternates(
                         textStyle: TextStyle(
-                          fontSize: 13, // حجم نص متوسط
+                          fontSize: 13,
                           color: AppColors().white,
                           fontWeight: FontWeight.w400,
                         ),
                       ),
                     ),
-                    const SizedBox(
-                      height: 8,
-                    ),
+                    const SizedBox(height: 8),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors().white,
@@ -160,14 +190,15 @@ class _ContactUsPageState extends State<ContactUsPage> {
                         ),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 14.0,
-                          vertical: 8.0, // حجم مناسب للزر
+                          vertical: 8.0,
                         ),
                       ),
                       onPressed: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const HelpSupportPage(),
+                            builder: (context) =>
+                                HelpSupportPage(adminId: adminId),
                           ),
                         );
                       },
@@ -175,7 +206,7 @@ class _ContactUsPageState extends State<ContactUsPage> {
                         "Send",
                         style: TextStyle(
                           color: AppColors().navy,
-                          fontSize: 13, // حجم نص متوسط للزر
+                          fontSize: 13,
                         ),
                       ),
                     ),

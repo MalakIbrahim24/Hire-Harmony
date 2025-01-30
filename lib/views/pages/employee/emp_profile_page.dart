@@ -207,12 +207,13 @@ class _EmpProfilePageState extends State<EmpProfilePage> {
                         },
                       ),
                       EmpBuildMenuContainer(
-                        title: 'Logout',
-                        icon: Icons.logout,
-                        onTap: () async {
-                          await authCubit.signOut();
-                        },
-                      ),
+  title: 'Logout',
+  icon: Icons.logout,
+  onTap: () async {
+    await authCubit.signOut(context);
+  },
+),
+
                     ]),
                   ),
                 ),

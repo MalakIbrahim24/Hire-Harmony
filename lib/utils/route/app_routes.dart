@@ -14,6 +14,7 @@ class AppRoutes {
   static const String empProfileInfoPage = '/emp-profile-info-page';
   static const String accountDeletionScreen = '/account-deletion-screen';
   static const String contactUsPage = '/contact-us-page';
+  static const String complaintsPage = '/complaints-page';
 
   static const String customButtomNavbarPage = '/custom-bottom-navbar-page';
   static const String phonePage = '/phone-page';

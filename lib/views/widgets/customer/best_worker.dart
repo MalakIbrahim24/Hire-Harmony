@@ -2,37 +2,62 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hire_harmony/utils/app_colors.dart';
+import 'package:hire_harmony/utils/route/app_routes.dart';
 import 'package:hire_harmony/views/pages/customer/view_emp_profile_page.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
-class BestWorker extends StatelessWidget {
+class BestWorker extends StatefulWidget {
   const BestWorker({super.key});
 
-  Future<Map<String, dynamic>> fetchUserInfo(String userId) async {
-    final userDoc =
-        await FirebaseFirestore.instance.collection('users').doc(userId).get();
-    if (userDoc.exists) {
-      return userDoc.data()!;
-    }
-    return {};
-  }
-
   @override
-  Widget build(BuildContext context) {
-    final Stream<List<Map<String, dynamic>>> bestWorkersStream =
-        FirebaseFirestore.instance
-            .collection('bestworker')
-            .snapshots()
-            .map((snapshot) {
+  State<BestWorker> createState() => _BestWorkerState();
+}
+
+class _BestWorkerState extends State<BestWorker> {
+  @override
+  Stream<List<Map<String, dynamic>>> fetchTopWorkers() {
+    return FirebaseFirestore.instance
+        .collection('users')
+        .where('role', isEqualTo: 'employee') // 🔥 جلب فقط الموظفين
+        .orderBy('completedOrdersCount',
+            descending: true) // ترتيب تنازلي حسب الطلبات المكتملة
+        .limit(5)
+        .snapshots()
+        .map((snapshot) {
       return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+
         return {
           'id': doc.id,
-          'data': doc.data(),
+          'name': data.containsKey('name') ? data['name'] : 'Unknown',
+          'img': data.containsKey('img') && data['img'].toString().isNotEmpty
+              ? data['img']
+              : 'https://via.placeholder.com/150', // صورة افتراضية
+          'completedOrdersCount': data.containsKey('completedOrdersCount')
+              ? (data['completedOrdersCount'] is int
+                  ? data['completedOrdersCount']
+                  : int.tryParse(data['completedOrdersCount'].toString()) ?? 0)
+              : 0, // 🔥 تأكد أنه int
+          'rating': data.containsKey('rating')
+              ? (data['rating'] is double
+                  ? data['rating']
+                  : double.tryParse(data['rating'].toString()) ?? 0.0)
+              : 0.0, // 🔥 تأكد أنه double
+          'reviewsNum': data.containsKey('reviewsNum')
+              ? (data['reviewsNum'] is int
+                  ? data['reviewsNum']
+                  : int.tryParse(data['reviewsNum'].toString()) ?? 0)
+              : 0, // 🔥 تأكد أنه int
         };
       }).toList();
     });
+  }
+
+  Widget build(BuildContext context) {
+    final Stream<List<Map<String, dynamic>>> bestWorkersStream =fetchTopWorkers();
 
     return SizedBox(
-      height: 250, // 🔹 ارتفاع مناسب
+      height: 250,
       child: StreamBuilder<List<Map<String, dynamic>>>(
         stream: bestWorkersStream,
         builder: (context, snapshot) {
@@ -40,180 +65,215 @@ class BestWorker extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('No best workers found'));
+            return const Center(child: Text('No top workers found'));
           }
+
           final bestWorkers = snapshot.data!;
+
           return ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: bestWorkers.length,
             itemBuilder: (context, index) {
-              final bestWorker = bestWorkers[index];
-              final bestWorkerId = bestWorker['id'];
+              final worker = bestWorkers[index];
 
-              return FutureBuilder<Map<String, dynamic>>(
-                future: fetchUserInfo(bestWorkerId),
-                builder: (context, userSnapshot) {
-                  if (userSnapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (userSnapshot.hasError ||
-                      userSnapshot.data == null ||
-                      userSnapshot.data!.isEmpty) {
-                    return const Center(
-                        child: Text('Error fetching user details'));
-                  }
+              return WorkerCard(worker: worker);
+            },
+          );
+        },
+      ),
+    );
+  }
+}
 
-                  final userInfo = userSnapshot.data!;
-                  final workerName = userInfo['name'] ?? 'Unknown Worker';
-                  final workerImg = userInfo['img'] ?? '';
-                  final workerServNum = bestWorker['data']['servNum'] ?? '0';
-                  final double rating = double.tryParse(userInfo['rating']?.toString() ?? '0.0') ?? 0.0;
-                  final int reviewsNum = int.tryParse(userInfo['reviewsNum']?.toString() ?? '0') ?? 0;
+class WorkerCard extends StatelessWidget {
+  final Map<String, dynamic> worker;
 
-                  return InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ViewEmpProfilePage(
-                            employeeId: bestWorkerId,
+  const WorkerCard({super.key, required this.worker});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ViewEmpProfilePage(
+              employeeId: worker['id'], // ✅ تمرير ID العامل
+            ),
+          ),
+        );
+      },
+      child: Container(
+        width: 220,
+        height: 270, // 🔹 تثبيت ارتفاع البطاقة
+        margin: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(70),
+              blurRadius: 12,
+              spreadRadius: 2,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // 🔹 صورة البروفايل والخلفية
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: AppColors().orange,
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(20)),
+                  ),
+                ),
+                Positioned(
+                  top: 25,
+                  left: 50,
+                  right: 50,
+                  child: CircleAvatar(
+                    radius: 35,
+                    backgroundColor: Colors.white,
+                    backgroundImage: worker['img'] != null
+                        ? NetworkImage(worker['img'])
+                        : null,
+                    child: worker['img'] == null
+                        ? Icon(Icons.person, size: 35, color: Colors.grey[600])
+                        : null,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 35),
+
+            // 🔹 اسم العامل
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text(
+                worker['name'] ?? 'Unknown Worker',
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.montserratAlternates(
+                  textStyle: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors().navy,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 5),
+
+            // 🔹 عدد الطلبات المكتملة
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.green, size: 16),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Completed: ${worker['completedOrdersCount']}',
+                    style: GoogleFonts.montserratAlternates(
+                      textStyle:
+                          const TextStyle(fontSize: 14, color: Colors.green),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 5),
+
+            // 🔹 التقييم والمراجعات
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.star, color: Colors.amber, size: 18),
+                      const SizedBox(width: 5),
+                      Text(
+                        worker['rating'].toStringAsFixed(1),
+                        style: GoogleFonts.montserratAlternates(
+                          textStyle: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors().navy,
                           ),
                         ),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(15),
-                    child: Container(
-                      width: 200,
-                      height: 220, // 🔹 تم تقليل الارتفاع لحذف الفراغ
-                      margin: const EdgeInsets.symmetric(horizontal: 10),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(15),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withAlpha(100),
-                            blurRadius: 10,
-                            spreadRadius: 2,
-                          ),
-                        ],
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min, // 🔹 منع التمدد غير الضروري
-                        children: [
-                          // 🔹 الجزء العلوي: خلفية برتقالية مع صورة العامل
-                          Container(
-                            decoration: BoxDecoration(
-                              color: AppColors().orange,
-                              borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Column(
-                                children: [
-                                  const SizedBox(height: 8),
-                                  Center(
-                                    child: CircleAvatar(
-                                      radius: 35,
-                                      backgroundColor: Colors.white,
-                                      backgroundImage: workerImg.isNotEmpty
-                                          ? NetworkImage(workerImg)
-                                          : null,
-                                      child: workerImg.isEmpty
-                                          ? Icon(Icons.person, size: 35, color: Colors.grey[600])
-                                          : null,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 5),
-                                  Text(
-                                    workerName,
-                                    textAlign: TextAlign.center,
-                                    style: GoogleFonts.montserratAlternates(
-                                      textStyle: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors().white,
-                                      ),
-                                    ),
-                                  ),
-                                  Text(
-                                    'Services: $workerServNum',
-                                    style: GoogleFonts.montserratAlternates(
-                                      textStyle: const TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      const Icon(Icons.message,
+                          color: Colors.blueGrey, size: 18),
+                      const SizedBox(width: 5),
+                      Text(
+                        worker['reviewsNum'].toString(),
+                        style: GoogleFonts.montserratAlternates(
+                          textStyle: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors().navy,
                           ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 5),
 
-                          const SizedBox(height: 8), // 🔹 تحسين التباعد بين القسمين
-
-                          // 🔹 عدد التقييمات والمراجعات
-                          Container(
-                            height: 60, // 🔹 تحديد ارتفاع مناسب لمنع الفراغ
-                            alignment: Alignment.center,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Flexible(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min, // 🔹 منع التمدد غير الضروري
-                                    children: [
-                                      Text(
-                                        rating.toStringAsFixed(1),
-                                        style: GoogleFonts.montserratAlternates(
-                                          textStyle: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                            color: AppColors().navy,
-                                          ),
-                                        ),
-                                      ),
-                                      const Text(
-                                        "Rating",
-                                        style: TextStyle(fontSize: 12, color: Colors.grey),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Flexible(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min, // 🔹 منع التمدد غير الضروري
-                                    children: [
-                                      Text(
-                                        reviewsNum.toString(),
-                                        style: GoogleFonts.montserratAlternates(
-                                          textStyle: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                            color: AppColors().navy,
-                                          ),
-                                        ),
-                                      ),
-                                      const Text(
-                                        "Reviews",
-                                        style: TextStyle(fontSize: 12, color: Colors.grey),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+            // 🔹 زر عرض الملف الشخصي
+            SizedBox(
+              width: 140,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors().navy,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ViewEmpProfilePage(
+                        employeeId: worker['id'], // ✅ تمرير ID العامل
                       ),
                     ),
                   );
                 },
-              );
-            },
-          );
-        },
+                child: Text(
+                  'View Profile',
+                  style: GoogleFonts.montserratAlternates(
+                    textStyle: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

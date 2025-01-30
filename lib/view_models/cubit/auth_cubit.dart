@@ -1,8 +1,12 @@
 import 'package:bloc/bloc.dart';
+import 'package:flutter/material.dart';
 import 'package:hire_harmony/services/auth_services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hire_harmony/services/firestore_services.dart';
+import 'package:hire_harmony/utils/route/app_routes.dart';
+import 'package:hire_harmony/utils/theme_provider.dart';
+import 'package:provider/provider.dart';
 
 part 'auth_state.dart';
 
@@ -120,15 +124,32 @@ class AuthCubit extends Cubit<AuthState> {
   //     emit(AuthFailure(e.toString()));
   //   }
   // }
-  Future<void> signOut() async {
+ /* Future<void> signOut() async {
     emit(AuthLoading());
     try {
       await authServices.signOut();
+      
       emit(AuthInitial());
     } catch (e) {
       emit(AuthFailure(e.toString()));
     }
+  }*/
+ Future<void> signOut(BuildContext context) async {
+  emit(AuthLoading());
+  try {
+    await authServices.signOut();
+
+    // التأكد من أن السياق لا يزال متاحًا قبل إعادة تعيين الثيم
+    if (context.mounted) {
+      Provider.of<ThemeProvider>(context, listen: false).resetTheme();
+    }
+
+    emit(AuthInitial());
+  } catch (e) {
+    emit(AuthFailure(e.toString()));
   }
+}
+
 
   Future<void> getCurrentUser() async {
     emit(AuthLoading());

@@ -68,7 +68,6 @@ class _buildMenuContainerState extends State<buildMenuContainer> {
                 ],
               ),
               child: Column(
-                
                 children: [
                   Column(
                     children: _buildMenuItems(context, authCubit),
@@ -109,13 +108,12 @@ class _buildMenuContainerState extends State<buildMenuContainer> {
         'text': 'Settings',
         'route': const SettingsPage(),
       },
-     
       {
         'icon': Icons.logout,
         'text': 'Logout',
         'route': null,
         'action': () async {
-          await authCubit.signOut();
+          await authCubit.signOut(context);
         },
       },
     ];
