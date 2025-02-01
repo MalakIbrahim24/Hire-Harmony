@@ -26,17 +26,166 @@ class CusHomePage extends StatefulWidget {
 
 class _CusHomePageState extends State<CusHomePage> {
   final String? userId = FirebaseAuth.instance.currentUser?.uid;
-
+List<String> categoriesToUpdate = [
+    "Plumbers, Pipefitters, and Steamfitters",
+    "Makeup Artists, Theatrical and Performance",
+    "Tutors"
+  ];
   @override
   void initState() {
     super.initState();
     _checkUserLocation();
+    getUserCategories('A2oGAPpXlBOOqKlR6jgC3xUK3003');
+    /*updateSpecificCategoriesWithWorkers(categoriesToUpdate);*/
   }
  
+  Future<void> getUserCategories(String userID) async {
+    try {
+      FirebaseFirestore firestore = FirebaseFirestore.instance;
 
+      // 🔹 البحث عن وثيقة `empcategories` داخل `users` لهذا المستخدم
+      QuerySnapshot empCategoriesSnapshot = await firestore
+          .collection('users')
+          .doc(userID)
+          .collection('empcategories')
+          .get();
+
+      if (empCategoriesSnapshot.docs.isEmpty) {
+        print("⚠️ لا توجد كاتيجوري للمستخدم $userID");
+      }
+
+      // 🔹 استخراج جميع الكاتيجوريز من كل المستندات
+      List<String> allCategories = [];
+
+      for (var doc in empCategoriesSnapshot.docs) {
+        List<dynamic> categories = doc['categories'] ?? [];
+        allCategories.addAll(categories.cast<String>());
+      }
+
+      print("✅ الكاتيجوري الخاصة بالمستخدم $userID: $allCategories");
+      List<String> userCategories = allCategories;
+      decrementEmpNumForCategories(userCategories, userID);
+    } catch (e) {
+      print("❌ خطأ أثناء جلب الكاتيجوري للمستخدم $userID: $e");
+    }
+  }
+
+  Future<void> decrementEmpNumForCategories(List<String> categories, String employeeId) async {
+  FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+  for (String categoryName in categories) {
+    categoryName = categoryName.trim(); // 🔹 إزالة المسافات الإضافية
+
+    // 🔹 البحث عن الكاتيجوري في `categories`
+    QuerySnapshot categorySnapshot = await firestore
+        .collection('categories')
+        .where('name', isEqualTo: categoryName)
+        .get();
+
+    if (categorySnapshot.docs.isEmpty) {
+      print("⚠️ الكاتيجوري '$categoryName' غير موجودة في Firestore.");
+      continue; // ⏭ تخطي هذه الكاتيجوري
+    }
+
+    // 🔹 استخراج `ID` الخاص بالكاتيجوري
+    String categoryId = categorySnapshot.docs.first.id;
+
+    // 🔹 جلب بيانات الكاتيجوري
+    DocumentSnapshot categoryDoc =
+        await firestore.collection('categories').doc(categoryId).get();
+
+    if (!categoryDoc.exists) {
+      print("⚠️ الوثيقة الخاصة بـ '$categoryName' غير موجودة.");
+      continue;
+    }
+
+    Map<String, dynamic> categoryData =
+        categoryDoc.data() as Map<String, dynamic>;
+
+    // 🔹 الحصول على العدد الحالي للعمال
+    int currentEmpNum = (categoryData['empNum'] ?? 0) as int;
+
+    // 🔹 التحقق من أن العدد لن يصبح سالبًا بعد الحذف
+    int updatedEmpNum = (currentEmpNum > 0) ? currentEmpNum - 1 : 0;
+
+    // 🔹 تحديث `workers` وإزالة `employeeId` باستخدام `FieldValue.arrayRemove()`
+    await firestore.collection('categories').doc(categoryId).update({
+      'empNum': updatedEmpNum, // ✅ تحديث عدد العمال
+      'workers': FieldValue.arrayRemove([employeeId]), // ✅ إزالة الموظف من القائمة
+    });
+
+    print("✅ تم تحديث `empNum` إلى $updatedEmpNum وإزالة $employeeId من `workers` في '$categoryName'.");
+  }
+}
+
+
+
+/*
+Future<void> updateSpecificCategoriesWithWorkers(List<String> categoryNames) async {
+  try {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+    for (String categoryName in categoryNames) {
+      print("🔍 Processing category: $categoryName");
+
+      // 🔹 1. البحث عن الكاتيجوري في كوليكشن `categories`
+      QuerySnapshot categorySnapshot = await firestore
+          .collection('categories')
+          .where('name', isEqualTo: categoryName)
+          .get();
+
+      if (categorySnapshot.docs.isEmpty) {
+        print("⚠ No category found with name: $categoryName");
+        continue; // تخطي الكاتيجوري غير الموجودة
+      }
+
+      DocumentReference categoryRef = categorySnapshot.docs.first.reference;
+
+      List<String> workerIds = [];
+
+      // 🔹 2. جلب المستخدمين الذين لديهم `role = employee`
+      QuerySnapshot usersSnapshot = await firestore
+          .collection('users')
+          .where('role', isEqualTo: 'employee') // ✅ جلب الموظفين فقط
+          .get();
+
+      for (var userDoc in usersSnapshot.docs) {
+        // 🔹 البحث داخل `empcategories` لكل مستخدم
+        QuerySnapshot empCategoriesSnapshot = await userDoc.reference.collection('empcategories').get();
+
+        for (var empCategoryDoc in empCategoriesSnapshot.docs) {
+          List<dynamic> categories = empCategoryDoc['categories'] ?? [];
+
+          if (categories.contains(categoryName)) {
+            workerIds.add(userDoc.id);
+            print("✅ User ${userDoc.id} belongs to category: $categoryName");
+            break; // ✅ إذا وجدناه، لا داعي لمتابعة البحث داخل نفس المستخدم
+          }
+        }
+      }
+
+      if (workerIds.isEmpty) {
+        print("⚠ No workers found for category: $categoryName. Skipping update.");
+        continue;
+      }
+
+      // 🔹 3. تحديث `workers` في `categories`
+      await categoryRef.update({
+        'workers': workerIds,
+      });
+
+      print("✅ Updated category: $categoryName with ${workerIds.length} workers.");
+    }
+
+    print("🎯 All specified categories updated successfully with workers.");
+  } catch (e) {
+    print("❌ Error updating categories: $e");
+  }
+}
+*/
 
   Future<void> _checkUserLocation() async {
-    await Future.delayed(const Duration(seconds: 10)); // الانتظار لمدة 10 ثوانٍ
+    await Future.delayed(const Duration(seconds: 5)); // الانتظار لمدة 10 ثوانٍ
 
     // افترض أن لديك Firebase API تتحقق من الموقع
     final isLocationSaved = await FirebaseApi().isUserLocationSaved(userId!);
@@ -198,7 +347,7 @@ class _CusHomePageState extends State<CusHomePage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Popular Services on Hire Harmony',
+                      'Popular Categories on Hire Harmony',
                       style: GoogleFonts.montserratAlternates(
                         textStyle: TextStyle(
                           fontSize: 14,

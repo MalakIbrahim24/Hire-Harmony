@@ -17,6 +17,7 @@ class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  FirestoreService._internal();
   // FirestoreService.dart
 
 // Create (Add)
@@ -37,10 +38,68 @@ class FirestoreService {
 
 // Delete
 
-  Future<void> deleteData({required String documentPath}) async {
+  /*Future<void> deleteData({required String documentPath}) async {
     final reference = firestore.doc(documentPath);
     debugPrint('delete: $documentPath');
     await reference.delete();
+  }*/
+ /// 🗑 **حذف أي مستند مع جميع الـ subcollections الخاصة به**
+  Future<void> deleteData({required String documentPath}) async {
+    final DocumentReference docRef = firestore.doc(documentPath);
+    debugPrint('🗑 Deleting: $documentPath');
+
+    try {
+      // 🔹 استخراج معرف المستخدم من المسار (إذا كان المستند داخل `users`)
+      String userId = documentPath.split('/').last;
+
+      // 🔹 التأكد أنه مستند مستخدم قبل حذف كل بياناته
+      if (documentPath.startsWith('users/')) {
+        await _deleteUserWithAllData(userId);
+      } else {
+        await docRef.delete();
+        debugPrint("✅ Successfully deleted document: $documentPath");
+      }
+    } catch (e) {
+      debugPrint("❌ Error deleting document: $e");
+    }
+  }
+
+  /// 🗑 **حذف المستخدم مع جميع الـ subcollections الخاصة به**
+  Future<void> _deleteUserWithAllData(String userId) async {
+    final DocumentReference userDocRef = firestore.collection('users').doc(userId);
+
+    try {
+      // 🔹 قائمة جميع الـ subcollections المحتملة للمستخدم
+      List<String> subcollectionNames = [
+        'serviceImages',
+        'reviews',
+        'orders',
+        'items',
+        'empcategories',
+        'completedOrders',
+        'bookingHistory',
+        'advertisements'
+      ];
+
+      // 🔹 حذف جميع المستندات داخل كل subcollection إذا كان موجودًا
+      for (var subcollection in subcollectionNames) {
+        var subDocs = await userDocRef.collection(subcollection).get();
+        if (subDocs.docs.isNotEmpty) {
+          for (var doc in subDocs.docs) {
+            await doc.reference.delete();
+            debugPrint("🗑 Deleted document: ${doc.id} from subcollection: $subcollection");
+          }
+          debugPrint("✅ Deleted subcollection: $subcollection for user: $userId");
+        }
+      }
+
+      // 🔹 حذف المستخدم نفسه بعد حذف كل البيانات الخاصة به
+      await userDocRef.delete();
+      debugPrint("✅ Successfully deleted user and all subcollections: users/$userId");
+
+    } catch (e) {
+      debugPrint("❌ Error deleting user with subcollections: $e");
+    }
   }
 
   Future<void> deleteDataa({

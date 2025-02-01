@@ -104,7 +104,7 @@ class _AdminActivityPageState extends State<AdminActivityPage> {
                   final logs = snapshot.data!;
 
                   return ListView.builder(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.all(10.0),
                     itemCount: logs.length,
                     itemBuilder: (context, index) {
                       final log = logs[index];

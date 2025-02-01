@@ -48,7 +48,8 @@ class ChatServices {
         senderEmail: currentUserEmail,
         message: message,
         reciverID: reciverid,
-        timestamp: timestamp);
+        timestamp: timestamp
+        );
 
     List<String> ids = [currentUserID, reciverid];
     ids.sort();

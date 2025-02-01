@@ -9,36 +9,50 @@ class EmployeesUnderCategoryPage extends StatelessWidget {
 
   const EmployeesUnderCategoryPage({required this.categoryName, super.key});
 
-  Future<List<Map<String, dynamic>>> fetchEmployees(String categoryName) async {
-  final usersCollection = FirebaseFirestore.instance.collection('users');
-  final userDocs = await usersCollection.get();
+  Future<List<Map<String, dynamic>>> fetchEmployeesByCategory(String categoryName) async {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
-  final filteredUsers = <Map<String, dynamic>>[];
+    try {
+      // 🔹 1. البحث عن مستند `category` باستخدام `name`
+      QuerySnapshot categorySnapshot = await firestore
+          .collection('categories')
+          .where('name', isEqualTo: categoryName)
+          .get();
 
-  debugPrint("🔍 Searching for category: $categoryName");
-
-  for (final userDoc in userDocs.docs) {
-    final empCategoriesCollection = userDoc.reference.collection('empcategories');
-    final empCategoryDocs = await empCategoriesCollection.get();
-
-    for (final empCategoryDoc in empCategoryDocs.docs) {
-      final List<dynamic>? categories = empCategoryDoc.data()['categories']; // جلب الأراي
-      
-      debugPrint("👤 Checking User: ${userDoc.id} - Categories: $categories");
-
-      if (categories != null && categories.contains(categoryName)) {
-        final userData = userDoc.data();
-        userData['uid'] = userDoc.id; // إضافة معرف المستخدم
-        filteredUsers.add(userData);
+      if (categorySnapshot.docs.isEmpty) {
+        print("⚠ No category found with name: $categoryName");
+        return [];
       }
+
+      DocumentSnapshot categoryDoc = categorySnapshot.docs.first;
+      List<dynamic> workerIds = categoryDoc['workers'] ?? []; // 🔹 جلب الـ `workers`
+
+      if (workerIds.isEmpty) {
+        print("⚠ No workers found for category: $categoryName");
+        return [];
+      }
+
+      // 🔹 2. جلب بيانات المستخدمين بناءً على قائمة `workers`
+      QuerySnapshot usersSnapshot = await firestore
+          .collection('users')
+          .where(FieldPath.documentId, whereIn: workerIds) // 🔹 جلب المستخدمين من القائمة
+          .get();
+
+      List<Map<String, dynamic>> employees = usersSnapshot.docs
+          .map((userDoc) => {
+                'uid': userDoc.id,
+                ...userDoc.data() as Map<String, dynamic>,
+              })
+          .toList();
+
+      print("✅ Found ${employees.length} employees for category: $categoryName");
+
+      return employees;
+    } catch (e) {
+      print("❌ Error fetching employees: $e");
+      return [];
     }
   }
-
-  debugPrint("✅ Found ${filteredUsers.length} employees for category: $categoryName");
-
-  return filteredUsers;
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +73,7 @@ class EmployeesUnderCategoryPage extends StatelessWidget {
         backgroundColor: AppColors().orange,
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: fetchEmployees(categoryName),
+        future: fetchEmployeesByCategory(categoryName),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());

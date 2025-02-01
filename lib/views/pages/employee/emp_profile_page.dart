@@ -191,7 +191,7 @@ class _EmpProfilePageState extends State<EmpProfilePage> {
                         icon: Icons.info,
                         onTap: () {
                           Navigator.pushNamed(
-                              context, AppRoutes.accountDeletionScreen);
+                              context, AppRoutes.empaccountDeletionScreen);
                         },
                       ),
                       EmpBuildMenuContainer(
@@ -207,13 +207,12 @@ class _EmpProfilePageState extends State<EmpProfilePage> {
                         },
                       ),
                       EmpBuildMenuContainer(
-  title: 'Logout',
-  icon: Icons.logout,
-  onTap: () async {
-    await authCubit.signOut(context);
-  },
-),
-
+                        title: 'Logout',
+                        icon: Icons.logout,
+                        onTap: () async {
+                          await authCubit.signOut(context);
+                        },
+                      ),
                     ]),
                   ),
                 ),

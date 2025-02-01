@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -15,6 +16,102 @@ class UserManagementPage extends StatefulWidget {
 
 class _UserManagementPageState extends State<UserManagementPage> {
   String searchQuery = '';
+  
+  Future<void> getUserCategories(String? userID) async {
+  try {
+    FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+    // 🔹 التأكد من أن `userID` ليس فارغًا
+    if (userID == null || userID.isEmpty) {
+      print("❌ خطأ: userID فارغ أو غير صالح.");
+      return;
+    }
+
+    // 🔹 البحث عن وثيقة `empcategories` داخل `users` لهذا المستخدم
+    QuerySnapshot empCategoriesSnapshot = await firestore
+        .collection('users')
+        .doc(userID)
+        .collection('empcategories')
+        .get();
+
+    if (empCategoriesSnapshot.docs.isEmpty) {
+      print("⚠️ لا توجد كاتيجوري للمستخدم $userID");
+      return;
+    }
+
+    // 🔹 استخراج جميع الكاتيجوريز من كل المستندات
+    List<String> allCategories = [];
+
+    for (var doc in empCategoriesSnapshot.docs) {
+      List<dynamic> categories = doc['categories'] ?? [];
+      allCategories.addAll(categories.cast<String>());
+    }
+
+    print("✅ الكاتيجوري الخاصة بالمستخدم $userID: $allCategories");
+
+    // 🔹 استدعاء `decrementEmpNumForCategories` لتحديث العدد وحذف المستخدم
+    await decrementEmpNumForCategories(allCategories, userID);
+  } catch (e) {
+    print("❌ خطأ أثناء جلب الكاتيجوري للمستخدم $userID: $e");
+  }
+}
+
+ Future<void> decrementEmpNumForCategories(List<String> categories, String employeeId) async {
+  FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+  for (String categoryName in categories) {
+    categoryName = categoryName.trim(); // 🔹 إزالة المسافات الإضافية
+
+    // 🔹 البحث عن الكاتيجوري في `categories`
+    QuerySnapshot categorySnapshot = await firestore
+        .collection('categories')
+        .where('name', isEqualTo: categoryName)
+        .get();
+
+    if (categorySnapshot.docs.isEmpty) {
+      print("⚠️ الكاتيجوري '$categoryName' غير موجودة في Firestore.");
+      continue; // ⏭ تخطي هذه الكاتيجوري
+    }
+
+    // 🔹 استخراج `ID` الخاص بالكاتيجوري
+    String categoryId = categorySnapshot.docs.first.id;
+
+    // 🔹 جلب بيانات الكاتيجوري
+    DocumentSnapshot categoryDoc = await firestore.collection('categories').doc(categoryId).get();
+
+    if (!categoryDoc.exists) {
+      print("⚠️ الوثيقة الخاصة بـ '$categoryName' غير موجودة.");
+      continue;
+    }
+
+    Map<String, dynamic> categoryData = categoryDoc.data() as Map<String, dynamic>;
+
+    // 🔹 الحصول على العدد الحالي للعمال
+    int currentEmpNum = (categoryData['empNum'] ?? 0) as int;
+
+    // 🔹 جلب قائمة العمال الحالية أو إنشاء قائمة جديدة
+    List<String> currentWorkers = (categoryData['workers'] as List<dynamic>? ?? [])
+        .map((e) => e.toString())
+        .toList();
+
+    // 🔹 التحقق من أن `employeeId` موجود بالفعل قبل إزالته
+    if (currentWorkers.contains(employeeId)) {
+      currentWorkers.remove(employeeId);
+    }
+
+    // 🔹 التأكد من أن العدد لن يصبح سالبًا بعد الحذف
+    int updatedEmpNum = (currentEmpNum > 0) ? currentEmpNum - 1 : 0;
+
+    // 🔹 تحديث `empNum` وإزالة `employeeId` باستخدام `FieldValue.arrayRemove()`
+    await firestore.collection('categories').doc(categoryId).update({
+      'empNum': updatedEmpNum, // ✅ تحديث عدد العمال
+      'workers': FieldValue.arrayRemove([employeeId]), // ✅ إزالة الموظف من القائمة
+    });
+
+    print("✅ تم تحديث `empNum` إلى $updatedEmpNum وإزالة $employeeId من `workers` في '$categoryName'.");
+  }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -122,8 +219,8 @@ class _UserManagementPageState extends State<UserManagementPage> {
                     path: 'users',
                     builder: (data, documentId) => {
                       'id': documentId,
-                      'name': data['name'] ?? 'Unnamed',
-                      'email': data['email'] ?? 'No email',
+                      'name': data['name']?.toString() ?? 'Unnamed',
+                      'email': data['email']?.toString() ?? 'No email',
                     },
                   ),
                   builder: (context, snapshot) {
@@ -159,6 +256,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
                       itemCount: users.length,
                       itemBuilder: (context, index) {
                         final user = users[index];
+                        final userid = user['uid']?.toString() ?? '';
 
                         return Card(
                           margin: const EdgeInsets.symmetric(
@@ -213,8 +311,10 @@ class _UserManagementPageState extends State<UserManagementPage> {
 
                                   // Update delete logic in UserManagementPage
                                   if (confirm2 == true) {
-                                    final deletionTime = DateTime
-                                        .now(); // Capture the deletion timestamp
+                                    final deletionTime = DateTime.now();
+
+                                    await getUserCategories(user['id']);
+                                    // Capture the deletion timestamp
 
                                     // Add deleted user to Firestore "deleted_users" collection
                                     await FirestoreService.instance.addData(

@@ -31,93 +31,61 @@ class _PhonePageState extends State<PhonePage> {
   bool isSendOtpButtonEnabled = false;
   String verificationId = "";
 
-Future<void> updateCategoryWorkerCounts() async {
-  FirebaseFirestore firestore = FirebaseFirestore.instance;
+  Future<void> incrementEmpNumForCategories(
+      List<String> categories, String employeeId) async {
+    FirebaseFirestore firestore = FirebaseFirestore.instance;
 
-  // استرجاع جميع الكاتيجوري
-  QuerySnapshot categoriesSnapshot =
-      await firestore.collection('categories').get();
+    for (String categoryName in categories) {
+      categoryName = categoryName.trim(); // إزالة المسافات الإضافية
 
-  // خريطة لحفظ عدد العمال لكل كاتيجوري
-  Map<String, int> categoryWorkerCount = {};
+      // البحث عن الكاتيجوري بناءً على الاسم
+      QuerySnapshot categorySnapshot = await firestore
+          .collection('categories')
+          .where('name', isEqualTo: categoryName)
+          .get();
 
-  // تحضير جميع الكاتيجوري من قاعدة البيانات
-  for (var categoryDoc in categoriesSnapshot.docs) {
-    String categoryId = categoryDoc.id;
-    categoryWorkerCount[categoryId] = 0; // تعيين العدد مبدئيًا 0
-  }
+      if (categorySnapshot.docs.isEmpty) {
+        print("⚠️ الكاتيجوري '$categoryName' غير موجودة في Firestore.");
+        continue; // تخطي هذه الكاتيجوري
+      }
 
-  // استرجاع جميع المستخدمين
-  QuerySnapshot usersSnapshot = await firestore.collection('users').get();
+      // الحصول على ID الخاص بالكاتيجوري
+      String categoryId = categorySnapshot.docs.first.id;
 
-  for (var userDoc in usersSnapshot.docs) {
-    String userId = userDoc.id;
+      // جلب بيانات الكاتيجوري
+      DocumentSnapshot categoryDoc =
+          await firestore.collection('categories').doc(categoryId).get();
 
-    // جلب كوليكشن `empcategories` لكل مستخدم
-    QuerySnapshot empCategoriesSnapshot = await firestore
-        .collection('users')
-        .doc(userId)
-        .collection('empcategories')
-        .get();
+      if (!categoryDoc.exists) {
+        print("⚠️ الوثيقة الخاصة بـ '$categoryName' غير موجودة.");
+        continue;
+      }
 
-    if (empCategoriesSnapshot.docs.isEmpty) {
-      print("❌ المستخدم $userId ليس لديه أي كاتيجوري في empcategories");
-    } else {
-      print("✅ المستخدم $userId لديه ${empCategoriesSnapshot.docs.length} كاتيجوري في empcategories");
-    }
-
-    for (var empCategoryDoc in empCategoriesSnapshot.docs) {
       Map<String, dynamic> categoryData =
-          empCategoryDoc.data() as Map<String, dynamic>;
+          categoryDoc.data() as Map<String, dynamic>;
 
-      if (!categoryData.containsKey('categories')) {
-        print("⚠️ تحذير: الوثيقة ${empCategoryDoc.id} في `empcategories` لا تحتوي على حقل 'categories'");
-        continue;
+      int currentEmpNum = (categoryData['empNum'] ?? 0) as int;
+
+      // جلب قائمة العمال الحالية أو إنشاء قائمة جديدة
+      List<String> currentWorkers = (categoryData['workers'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [];
+
+      // إضافة `employeeId` فقط إذا لم يكن موجودًا
+      if (!currentWorkers.contains(employeeId)) {
+        currentWorkers.add(employeeId);
       }
 
-      List<dynamic> categoryNames = categoryData['categories'] ?? [];
+      // تحديث `empNum` وزيادة العدد + تحديث قائمة `workers`
+      await firestore.collection('categories').doc(categoryId).update({
+        'empNum': currentEmpNum + 1, // ✅ زيادة العدد بمقدار واحد
+        'workers': currentWorkers, // ✅ تحديث قائمة العمال
+      });
 
-      if (categoryNames.isEmpty) {
-        print("⚠️ تحذير: قائمة الكاتيجوري فارغة للمستخدم $userId");
-        continue;
-      }
-
-      // التكرار على كل الكاتيجوري التي ينتمي إليها العامل
-      for (String categoryName in categoryNames) {
-        categoryName = categoryName.trim(); // إزالة أي مسافات زائدة
-
-        print("🔍 المستخدم $userId ينتمي إلى الكاتيجوري: $categoryName");
-
-        // البحث عن كاتيجوري بهذا الاسم في القائمة
-        for (var categoryDoc in categoriesSnapshot.docs) {
-          Map<String, dynamic> categoryDocData =
-              categoryDoc.data() as Map<String, dynamic>;
-
-          String categoryDocName = categoryDocData['name']?.toString().trim() ?? '';
-
-          if (categoryDocName == categoryName) {
-            String categoryId = categoryDoc.id;
-            categoryWorkerCount[categoryId] =
-                (categoryWorkerCount[categoryId] ?? 0) + 1;
-            print("✅ تم إضافة المستخدم $userId إلى الكاتيجوري $categoryDocName (ID: $categoryId)");
-          }
-        }
-      }
+      print("✅ تم تحديث `empNum` والـ `workers` للكاتيجوري '$categoryName'.");
     }
   }
-
-  // طباعة النتائج للتحقق من التعداد
-  print("🔹 عدد العمال لكل كاتيجوري: $categoryWorkerCount");
-
-  // تحديث كل كاتيجوري بعدد العمال المرتبطين بها
-  for (var entry in categoryWorkerCount.entries) {
-    await firestore.collection('categories').doc(entry.key).update({
-      'empNum': entry.value,
-    });
-  }
-
-  print("✅ تم تحديث أعداد العمال لكل كاتيجوري بنجاح!");
-}
 
   // Validate phone number format (basic validation)
   bool isValidPhoneNumber(String phoneNumber) {
@@ -241,12 +209,13 @@ Future<void> updateCategoryWorkerCounts() async {
   // Verify OTP and register the user
   Future<void> verifyOtpAndRegister(
       Map<String, dynamic> formData, List<String> categories) async {
-    const availability = 'true';
+    const availability = 'available';
     const state = 'accepted';
-    const img ='https://thumbs.dreamstime.com/b/default-avatar-profile-icon-vector-social-media-user-image-182145777.jpg';
+    const img =
+        'https://thumbs.dreamstime.com/b/default-avatar-profile-icon-vector-social-media-user-image-182145777.jpg';
 
     try {
-      // Verify the OTP and sign in the user with the phone credential
+      // Verify OTP and sign in the user
       final PhoneAuthCredential credential = PhoneAuthProvider.credential(
         verificationId: verificationId,
         smsCode: _otpController.text,
@@ -261,15 +230,14 @@ Future<void> updateCategoryWorkerCounts() async {
 
       final User user = userCredential.user!;
 
-      // Link email and password as additional providers
+      // Link email and password
       final emailCredential = EmailAuthProvider.credential(
         email: formData['email']!,
         password: formData['password']!,
       );
-
       await user.linkWithCredential(emailCredential);
 
-      // Store user details in Firestore
+      // Hash the password
       String hashedPassword = _hashPassword(formData['password']!);
 
       // Upload images to Supabase
@@ -281,8 +249,11 @@ Future<void> updateCategoryWorkerCounts() async {
       final selfieImageUrl = await _uploadToSupabase(
           selfieImage, 'selfie_${DateTime.now().millisecondsSinceEpoch}.jpg');
 
-      // Save user data in the `users` collection
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+      // Reference to Firestore
+      FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+      // Store user details
+      await firestore.collection('users').doc(user.uid).set({
         'name': formData['name'],
         'email': formData['email'],
         'passwordHash': hashedPassword,
@@ -297,16 +268,18 @@ Future<void> updateCategoryWorkerCounts() async {
         'similarity': formData['similarity'],
       });
 
-      // Save categories in the `empcategories` collection
-      await FirebaseFirestore.instance
+      // Store categories as an array inside `empcategories`
+      await firestore
           .collection('users')
           .doc(user.uid)
           .collection('empcategories')
-          .add({
-        'categories': categories,
+          .doc() // Auto-generated ID
+          .set({
+        'categories': categories, // Store categories as an array
       });
-updateCategoryWorkerCounts();
-      // Navigate to the success page
+      await incrementEmpNumForCategories(categories, user.uid);
+
+      // Navigate to success page
       if (!mounted) return;
       Navigator.pushNamed(context, AppRoutes.empVerificationSuccessPage);
     } catch (e) {
@@ -366,14 +339,14 @@ updateCategoryWorkerCounts();
         'email': formData['email'],
         'passwordHash': hashedPassword,
         'phone': '+970${_phoneController.text.trim()}',
-        'role': 'employee',
+        'role': 'customer',
         'uid': user.uid,
         'img': img,
       });
 
       // Navigate to the success page
       if (!mounted) return;
-      Navigator.pushNamed(context, AppRoutes.empVerificationSuccessPage);
+      Navigator.pushNamed(context, AppRoutes.cusVerificationSuccessPage);
     } catch (e) {
       // Handle errors
       if (!mounted) return;
@@ -575,3 +548,5 @@ updateCategoryWorkerCounts();
     );
   }
 }
+
+ 

@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hire_harmony/services/firestore_services.dart';
 import 'package:hire_harmony/utils/app_colors.dart';
 import 'package:hire_harmony/utils/route/app_routes.dart';
 
-class AccountDeletionScreen extends StatelessWidget {
-  const AccountDeletionScreen({super.key});
-
+class EmpAccountDeletionScreen extends StatelessWidget {
+  const EmpAccountDeletionScreen({super.key});
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -59,6 +59,84 @@ class _AccountDeletionBodyState extends State<AccountDeletionBody> {
     super.initState();
     _fetchUserImage();
   }
+   Future<void> getUserCategories(String userID) async {
+    try {
+      FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+      // 🔹 البحث عن وثيقة `empcategories` داخل `users` لهذا المستخدم
+      QuerySnapshot empCategoriesSnapshot = await firestore
+          .collection('users')
+          .doc(userID)
+          .collection('empcategories')
+          .get();
+
+      if (empCategoriesSnapshot.docs.isEmpty) {
+        print("⚠️ لا توجد كاتيجوري للمستخدم $userID");
+      }
+
+      // 🔹 استخراج جميع الكاتيجوريز من كل المستندات
+      List<String> allCategories = [];
+
+      for (var doc in empCategoriesSnapshot.docs) {
+        List<dynamic> categories = doc['categories'] ?? [];
+        allCategories.addAll(categories.cast<String>());
+      }
+
+      print("✅ الكاتيجوري الخاصة بالمستخدم $userID: $allCategories");
+      List<String> userCategories = allCategories;
+      decrementEmpNumForCategories(userCategories, userID);
+    } catch (e) {
+      print("❌ خطأ أثناء جلب الكاتيجوري للمستخدم $userID: $e");
+    }
+  }
+
+  Future<void> decrementEmpNumForCategories(List<String> categories, String employeeId) async {
+  FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+  for (String categoryName in categories) {
+    categoryName = categoryName.trim(); // 🔹 إزالة المسافات الإضافية
+
+    // 🔹 البحث عن الكاتيجوري في `categories`
+    QuerySnapshot categorySnapshot = await firestore
+        .collection('categories')
+        .where('name', isEqualTo: categoryName)
+        .get();
+
+    if (categorySnapshot.docs.isEmpty) {
+      print("⚠️ الكاتيجوري '$categoryName' غير موجودة في Firestore.");
+      continue; // ⏭ تخطي هذه الكاتيجوري
+    }
+
+    // 🔹 استخراج `ID` الخاص بالكاتيجوري
+    String categoryId = categorySnapshot.docs.first.id;
+
+    // 🔹 جلب بيانات الكاتيجوري
+    DocumentSnapshot categoryDoc =
+        await firestore.collection('categories').doc(categoryId).get();
+
+    if (!categoryDoc.exists) {
+      print("⚠️ الوثيقة الخاصة بـ '$categoryName' غير موجودة.");
+      continue;
+    }
+
+    Map<String, dynamic> categoryData =
+        categoryDoc.data() as Map<String, dynamic>;
+
+    // 🔹 الحصول على العدد الحالي للعمال
+    int currentEmpNum = (categoryData['empNum'] ?? 0) as int;
+
+    // 🔹 التحقق من أن العدد لن يصبح سالبًا بعد الحذف
+    int updatedEmpNum = (currentEmpNum > 0) ? currentEmpNum - 1 : 0;
+
+    // 🔹 تحديث `workers` وإزالة `employeeId` باستخدام `FieldValue.arrayRemove()`
+    await firestore.collection('categories').doc(categoryId).update({
+      'empNum': updatedEmpNum, // ✅ تحديث عدد العمال
+      'workers': FieldValue.arrayRemove([employeeId]), // ✅ إزالة الموظف من القائمة
+    });
+
+    print("✅ تم تحديث `empNum` إلى $updatedEmpNum وإزالة $employeeId من `workers` في '$categoryName'.");
+  }
+}
 
   Future<void> _fetchUserImage() async {
     final User? user = _auth.currentUser;
@@ -166,71 +244,77 @@ class _AccountDeletionBodyState extends State<AccountDeletionBody> {
   }
 
   void _showFinalConfirmationDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: AppColors().white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-          title: Text(
-            'Are you absolutely sure?',
-            style: GoogleFonts.montserratAlternates(
-              textStyle: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors().navy,
-              ),
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        backgroundColor: AppColors().white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(15),
+        ),
+        title: Text(
+          'Are you absolutely sure?',
+          style: GoogleFonts.montserratAlternates(
+            textStyle: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors().navy,
             ),
           ),
-          content: Text(
-            'This is your last chance to cancel.',
-            style: GoogleFonts.montserratAlternates(
-              textStyle: TextStyle(
-                fontSize: 14,
-                color: AppColors().grey,
-              ),
+        ),
+        content: Text(
+          'This is your last chance to cancel.',
+          style: GoogleFonts.montserratAlternates(
+            textStyle: TextStyle(
+              fontSize: 14,
+              color: AppColors().grey,
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text(
-                'Cancel',
-                style: GoogleFonts.montserratAlternates(
-                  textStyle: TextStyle(
-                    fontSize: 14,
-                    color: AppColors().navy,
-                  ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.montserratAlternates(
+                textStyle: TextStyle(
+                  fontSize: 14,
+                  color: AppColors().navy,
                 ),
               ),
             ),
-            ElevatedButton(
-              onPressed: () async {
-                
-                await _deleteAccount(context);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors().orange,
-              ),
-              child: Text(
-                'Delete Account',
-                style: GoogleFonts.montserratAlternates(
-                  textStyle: TextStyle(
-                    fontSize: 14,
-                    color: AppColors().white,
-                  ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final User? user = FirebaseAuth.instance.currentUser;
+           
+
+              if (user != null) {
+                await _deleteAccount(context, user.uid);
+          
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors().orange,
+            ),
+            child: Text(
+              'Delete Account',
+              style: GoogleFonts.montserratAlternates(
+                textStyle: TextStyle(
+                  fontSize: 14,
+                  color: AppColors().white,
                 ),
               ),
             ),
-          ],
-        );
-      },
-    );
-  }
+          ),
+        ],
+      );
+    },
+  );
+}
+
 
   Future<String?> _getPasswordFromUser(BuildContext context) async {
     String? password;
@@ -261,13 +345,11 @@ class _AccountDeletionBodyState extends State<AccountDeletionBody> {
     );
     return password;
   }
-
-  Future<void> _deleteAccount(BuildContext context) async {
-    final User? user = _auth.currentUser;
-    //final authCubit = BlocProvider.of<AuthCubit>(context);
-
+  
+Future<void> _deleteAccount(BuildContext context, String userId) async {
+  try {
+    final User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      try {
         final password = await _getPasswordFromUser(context);
         if (password == null || password.isEmpty) {
           _showErrorDialog(
@@ -282,38 +364,39 @@ class _AccountDeletionBodyState extends State<AccountDeletionBody> {
           email: user.email!,
           password: password,
         );
-        await user.reauthenticateWithCredential(credential);
+        await user?.reauthenticateWithCredential(credential);
 
-        // Continue with account deletion...
-        final DocumentSnapshot userData =
-            await _firestore.collection('users').doc(user.uid).get();
-
-        await _firestore.collection('deleted_users').doc(user.uid).set(
-              userData.data() as Map<String, dynamic>,
-            );
-
-        await _firestore.collection('users').doc(user.uid).delete();
-        await user.delete();
-
-        //await authCubit.signOut();
-
-        if (!mounted) return;
-        Navigator.pushNamedAndRemoveUntil(
-          // ignore: use_build_context_synchronously
-          context,
-          AppRoutes.loginPage,
-          (Route<dynamic> route) =>
-              route.settings.name == AppRoutes.welcomePage,
-        );
-      } catch (e) {
-        debugPrint('Error during account deletion: $e');
-        _showErrorDialog(
-            // ignore: use_build_context_synchronously
-            context,
-            'Failed to delete your account. Please try again.');
-      }
     }
+
+  await  getUserCategories(user!.uid);
+
+    
+    // 🔹 حذف بيانات المستخدم من Firestore
+    await FirestoreService.instance.deleteData(documentPath: 'users/$userId');
+
+    // 🔹 حذف الحساب من Firebase Authentication
+    
+    if (user != null) {
+      await user.delete();
+    }
+
+    // 🔹 توجيه المستخدم إلى صفحة تسجيل الدخول
+    if (!mounted) return;
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      AppRoutes.loginPage,
+      (Route<dynamic> route) => route.settings.name == AppRoutes.welcomePage,
+    );
+
+    debugPrint('✅ الحساب تم حذفه بنجاح');
+  } catch (e) {
+    debugPrint('❌ خطأ أثناء حذف الحساب: $e');
+    _showErrorDialog(context, 'فشل حذف الحساب، حاول مرة أخرى.');
   }
+}
+
+
+
 
   void _showErrorDialog(BuildContext context, String message) {
     showDialog(

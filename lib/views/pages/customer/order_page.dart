@@ -219,57 +219,200 @@ class _OrderPageState extends State<OrderPage>
     );
   }
 
-  // Orders and Completed Orders Tabs
-  Widget _buildOrdersTab(Stream<List<Map<String, dynamic>>> ordersStream,
-      {bool isCompleted = false}) {
-    return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: ordersStream,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+Widget _buildOrdersTab(Stream<List<Map<String, dynamic>>> ordersStream,
+    {bool isCompleted = false}) {
+  return StreamBuilder<List<Map<String, dynamic>>>(
+    stream: ordersStream,
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return const Center(child: CircularProgressIndicator());
+      }
 
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return Center(
-            child: Text(
-              isCompleted ? 'No completed orders found.' : 'No orders found.',
-              style: GoogleFonts.montserratAlternates(
-                fontSize: 18,
-                color: AppColors().navy,
-                fontWeight: FontWeight.bold,
-              ),
+      if (!snapshot.hasData || snapshot.data!.isEmpty) {
+        return Center(
+          child: Text(
+            isCompleted ? 'No completed orders found.' : 'No orders found.',
+            style: GoogleFonts.montserratAlternates(
+              fontSize: 18,
+              color: AppColors().navy,
+              fontWeight: FontWeight.bold,
             ),
-          );
-        }
+          ),
+        );
+      }
 
-        final orders = snapshot.data!;
+      final orders = snapshot.data!;
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(10),
-          itemCount: orders.length,
-          itemBuilder: (context, index) {
-            final order = orders[index];
-            final sentTime = order['sentTime'] as Timestamp?;
-            final formattedTime = sentTime != null
-                ? DateFormat.jm().format(sentTime.toDate())
-                : 'Unknown time';
-            final formattedDate = sentTime != null
-                ? DateFormat.yMMMMd().format(sentTime.toDate())
-                : 'Unknown date';
+      return ListView.builder(
+        padding: const EdgeInsets.all(10),
+        itemCount: orders.length,
+        itemBuilder: (context, index) {
+          final order = orders[index];
 
-            final status = order['status'] as String? ?? 'Unknown';
+          // ✅ التعامل مع القيم النصية التي قد تحتوي على null
+          final String orderId = order['id']?.toString() ?? 'Unknown ID';
+          final String orderName = order['name']?.toString() ?? 'No Title';
+          final String employeeId = order['reciverId']?.toString() ?? 'Unknown';
+          final String orderStatus = order['status']?.toString() ?? 'Unknown';
+          final String description = order['description']?.toString() ?? 'No description';
 
+          // ✅ التأكد من أن `confirmedTime` ليس null قبل تحويله إلى Timestamp
+          final Timestamp? sentTime = order['confirmedTime'] as Timestamp?;
+          final String formattedTime = sentTime != null
+              ? DateFormat.jm().format(sentTime.toDate())
+              : 'Unknown time';
+          final String formattedDate = sentTime != null
+              ? DateFormat.yMMMMd().format(sentTime.toDate())
+              : 'Unknown date';
+
+          final bool isReviewed = order['reviewed'] == true;
+
+          // ✅ اختيار لون البطاقة بناءً على حالة المراجعة
+          final Color cardColor = isReviewed
+              ? Colors.grey[200]! // رمادي فاتح للطلبات التي تمت مراجعتها
+              : AppColors().orangelight; // برتقالي فاتح للطلبات التي لم تتم مراجعتها
+
+          // ✅ تصميم خاص للطلبات المكتملة
+          if (isCompleted) {
+            return Card(
+              color: cardColor, // تحديد لون البطاقة
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+              margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+              child: Padding(
+                padding: const EdgeInsets.all(15),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ✅ اسم الطلب مع دائرة الحالة
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          orderName,
+                          style: GoogleFonts.montserratAlternates(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors().navy,
+                          ),
+                        ),
+                        Icon(
+                          Icons.circle,
+                          color: isReviewed
+                              ? Colors.grey // رمادي للطلبات المكتملة والمراجعة
+                              : AppColors().orange, // برتقالي للطلبات غير المراجعة
+                          size: 14,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 5),
+
+                    // ✅ اسم الموظف
+                    FutureBuilder<String>(
+                      future: getEmployeeNameById(employeeId),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return Text(
+                            'Loading employee name...',
+                            style: GoogleFonts.montserratAlternates(
+                                fontSize: 14, color: Colors.grey),
+                          );
+                        } else if (snapshot.hasError) {
+                          return Text(
+                            'Error fetching name',
+                            style: GoogleFonts.montserratAlternates(
+                                fontSize: 14, color: Colors.red),
+                          );
+                        } else {
+                          return Text(
+                            'Employee: ${snapshot.data!}',
+                            style: GoogleFonts.montserratAlternates(
+                                fontSize: 15, color: Colors.black87),
+                          );
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 8),
+
+                    // ✅ عرض الوصف
+                    Text(
+                      'Description:',
+                      style: GoogleFonts.montserratAlternates(
+                          fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      description,
+                      style: GoogleFonts.montserratAlternates(
+                          fontSize: 14, color: Colors.black87),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    // ✅ عرض وقت التأكيد
+                    Text(
+                      'Confirmed at: $formattedDate - $formattedTime',
+                      style: GoogleFonts.montserratAlternates(
+                          fontSize: 14, color: Colors.grey[600]),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // ✅ زر "Tap to Review" فقط إذا لم تتم المراجعة
+                    if (!isReviewed)
+                      Center(
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ReviewPage(
+                                    orderId: orderId,
+                                    employeeId: employeeId,
+                                    employeeName: orderName,
+                                  ),
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors().orange, // برتقالي غامق للزر
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 20, vertical: 12),
+                            ),
+                            child: Text(
+                              'Tap to Review',
+                              style: GoogleFonts.montserratAlternates(
+                                  fontSize: 16,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          } 
+          
+          // ❌ الطلبات غير المكتملة تبقى كما هي (تصميم بسيط بدون بطاقات)
+          else {
             return ListTile(
               title: Text(
-                order['name'] as String? ?? 'No Title',
+                orderName,
                 style: GoogleFonts.montserratAlternates(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-
               subtitle: FutureBuilder<String>(
-                future: getEmployeeNameById(order['reciverId']),
+                future: getEmployeeNameById(employeeId),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return Text(
@@ -292,35 +435,17 @@ class _OrderPageState extends State<OrderPage>
               ),
               trailing: Icon(
                 Icons.circle,
-                color: (order['reviewed'] == true)
-                    ? Colors.grey
-                    : _getStatusColor(status),
+                color: _getStatusColor(orderStatus),
                 size: 12,
               ),
-
-              onTap: isCompleted
-                  ? () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ReviewPage(
-                            orderId:
-                                order['id']?.toString() ?? 'Unnamed Employee',
-                            employeeId: order['reciverId']?.toString() ??
-                                'Unnamed Employee',
-                            employeeName:
-                                order['name']?.toString() ?? 'Unnamed Employee',
-                          ),
-                        ),
-                      );
-                    }
-                  : null, // لا يفعل شيئًا إذا لم يكن الطلب مكتملًا
             );
-          },
-        );
-      },
-    );
-  }
+          }
+        },
+      );
+    },
+  );
+}
+
 
   Future<void> _deleteRequest({
     required String customerId,

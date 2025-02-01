@@ -23,6 +23,7 @@ import 'package:hire_harmony/views/pages/customer/account_deletion_page.dart';
 import 'package:hire_harmony/views/pages/customer/view_all_popular_services.dart';
 import 'package:hire_harmony/views/pages/customer/view_emp_profile_page.dart';
 import 'package:hire_harmony/views/pages/employee/contact_us_page.dart';
+import 'package:hire_harmony/views/pages/employee/emp_account_deletion_emp_page.dart';
 import 'package:hire_harmony/views/pages/employee/emp_navbar.dart';
 import 'package:hire_harmony/views/pages/employee/emp_notifications_page.dart';
 import 'package:hire_harmony/views/pages/employee/emp_profile_info_page.dart';
@@ -164,6 +165,7 @@ class AppRouter {
           builder: (_) => const AccountDeletionScreen(),
           settings: settings,
         );
+      
       case AppRoutes.contactUsPage:
         return MaterialPageRoute(
           builder: (_) => const ContactUsPage(),
@@ -192,6 +194,11 @@ class AppRouter {
       case AppRoutes.adManagementPage:
         return MaterialPageRoute(
           builder: (_) => const AdManagementPage(),
+          settings: settings,
+        );
+        case AppRoutes.empaccountDeletionScreen:
+        return MaterialPageRoute(
+          builder: (_) => const EmpAccountDeletionScreen(),
           settings: settings,
         );
       case AppRoutes.categoryManagementPage:
