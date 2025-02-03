@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hire_harmony/utils/app_colors.dart';
 import 'package:hire_harmony/views/pages/customer/cus_edit_profile_page.dart';
+import 'package:hire_harmony/views/pages/map_page.dart';
 
 class CusProfileInfo extends StatefulWidget {
   const CusProfileInfo({super.key});
@@ -158,17 +159,17 @@ class _CusProfileInfoState extends State<CusProfileInfo> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Container(
-               decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors().grey,
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors().grey,
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
                     ),
+                  ],
+                ),
                 child: Card(
                   color: Theme.of(context).colorScheme.surface,
                   shadowColor: Theme.of(context).colorScheme.tertiary,
@@ -196,14 +197,35 @@ class _CusProfileInfoState extends State<CusProfileInfo> {
                         leading: Icon(Icons.location_on,
                             color: Theme.of(context).colorScheme.secondary),
                         title: Text(
-                          userData?['location'].toString() ?? 'No Location',
-                          style: TextStyle(
-                              color: Theme.of(context).colorScheme.primary),
-                        ),
-                        subtitle: Text(
                           'Location',
                           style: TextStyle(
                               color: Theme.of(context).colorScheme.primary),
+                        ),
+                        trailing: ElevatedButton(
+                          onPressed: () {
+                            if (userData?['location'] != null) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => MapScreen(
+                                      employeeId: _auth.currentUser!.uid),
+                                ),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content:
+                                        Text("❌no location for this user.")),
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors().orange,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: const Text('See Location',
+                              style: TextStyle(color: Colors.white)),
                         ),
                       ),
                       const Divider(),

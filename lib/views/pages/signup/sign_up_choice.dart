@@ -48,11 +48,12 @@ class SignUpChoice extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   // Placeholder for the logo
-                  CircleAvatar(
-                    radius: 65,
-                    backgroundColor: AppColors().navy,
-                    child: Icon(Icons.handyman_outlined,
-                        color: AppColors().white, size: 70),
+                  Center(
+                    child: Image.asset(
+                      'lib/assets/images/logo_orange.PNG',
+                      width: 200, // Bigger logo for better visibility
+                      height: 200,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Text(
@@ -70,7 +71,7 @@ class SignUpChoice extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 150),
+                const SizedBox(height: 100),
                 Text(
                   'Please choose your role',
                   textAlign: TextAlign.left,

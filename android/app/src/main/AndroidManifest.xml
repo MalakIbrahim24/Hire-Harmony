@@ -10,12 +10,15 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-feature android:name="android.hardware.location.gps" android:required="false"/>
 
     <application
         android:label="hire_harmony"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+
 
         <!-- Firebase Messaging Service with Conflict Fix -->
         <service android:name="com.google.firebase.messaging.FirebaseMessagingService"
@@ -60,6 +63,9 @@
         android:name="com.google.firebase.messaging.default_notification_channel_id"
         android:value="high_importance_channel"
         />
+        <meta-data
+      android:name="com.google.android.geo.API_KEY"
+      android:value="AIzaSyCyl4pNb6FhDky0Rad3z8GKDt4Un42ccP4" />
 
 
         <!-- Required for Flutter Plugin Registration -->

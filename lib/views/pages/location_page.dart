@@ -29,6 +29,7 @@ class _LocationPageState extends State<LocationPage> {
   final userId = FirebaseAuth.instance.currentUser?.uid;
   final FirestoreService _fireS = FirestoreService.instance;
 
+
   Future<void> redirectToHomePage(String uid) async {
     final role = await _fireS.getUserRoleByUid(uid);
 
@@ -65,8 +66,8 @@ class _LocationPageState extends State<LocationPage> {
               country = component['long_name'];
             }
           }
-debugPrint('city ${city}');
-debugPrint('country ${country}');
+    debugPrint('city ${city}');
+    debugPrint('country ${country}');
 
           locationDetails.value =
               '${city ?? 'Unknown City'}, ${country ?? 'Unknown Country'}';

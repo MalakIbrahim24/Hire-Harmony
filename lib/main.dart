@@ -3,8 +3,11 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get/get_core/src/get_main.dart';
+import 'package:get/get_instance/get_instance.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:hire_harmony/api/notification_screen.dart';
+import 'package:hire_harmony/src/controller/location_controller.dart';
 import 'package:hire_harmony/utils/route/app_router.dart';
 import 'package:hire_harmony/utils/route/app_routes.dart';
 import 'package:hire_harmony/utils/theme_provider.dart';
@@ -33,14 +36,34 @@ void main() async {
   );
 
   // await FirebaseApi().initNotifications();
+  Get.put(LocationController()); // تسجيل LocationController
 
   runApp(ChangeNotifierProvider(
     create: (context) => ThemeProvider(),
     child: const MyApp(),
-  ));
+    ));
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  await supabase.Supabase.initialize(
+    url: 'https://ntqgtfkiyevttllyyecq.supabase.co',
+    anonKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50cWd0ZmtpeWV2dHRsbHl5ZWNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzYxNTQzNDIsImV4cCI6MjA1MTczMDM0Mn0.7APvbYoT5BpkmV1goMLIzJ7Ys2pehlns-hCO5f1oIFU',
+  );
+
+
+  Get.put(LocationController()); 
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => ThemeProvider()),
+      ],
+      child: const MyApp(),
+    ),
+  );
+}
+  
 
   // await FirebaseApi().initNotifications();
-}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

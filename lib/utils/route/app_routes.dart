@@ -13,10 +13,7 @@ class AppRoutes {
   static const String empNotificationsPage = '/emp-notifications-page';
   static const String empProfileInfoPage = '/emp-profile-info-page';
   static const String accountDeletionScreen = '/account-deletion-screen';
-  static const String empaccountDeletionScreen = '/emp_account-deletion-screen';
-
   static const String contactUsPage = '/contact-us-page';
-  static const String complaintsPage = '/complaints-page';
 
   static const String customButtomNavbarPage = '/custom-bottom-navbar-page';
   static const String phonePage = '/phone-page';
@@ -50,6 +47,8 @@ class AppRoutes {
   static const String editedServicesPage = '/edited-services-page';
   static const String deletedAccounts = '/deleted-accounts';
   static const String employeesmaintenance = '/new-accounts-requests-page';
+  static const String complaintsPage = '/complaints-page';
+  static const String empaccountDeletionScreen = '/emp_account-deletion-screen';
 
   // static const String servicesManagementForm = '/services-management-form';
 }

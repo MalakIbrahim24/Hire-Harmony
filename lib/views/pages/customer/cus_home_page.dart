@@ -9,6 +9,7 @@ import 'package:hire_harmony/views/pages/customer/cus_notifications_page.dart';
 import 'package:hire_harmony/views/pages/customer/search_and_filter.dart';
 import 'package:hire_harmony/views/pages/customer/view_all_popular_services.dart';
 import 'package:hire_harmony/views/pages/location_page.dart';
+import 'package:hire_harmony/views/pages/near_page.dart';
 import 'package:hire_harmony/views/widgets/customer/best_worker.dart';
 import 'package:hire_harmony/views/widgets/customer/category_widget.dart';
 import 'package:hire_harmony/views/widgets/customer/custom_carousel_indicator.dart';
@@ -16,7 +17,9 @@ import 'package:hire_harmony/views/widgets/customer/invite_link_dialog.dart';
 import 'package:hire_harmony/views/widgets/customer/populer_service.dart';
 import 'package:hire_harmony/views/widgets/customer/view_all_best_workers_page.dart';
 import 'package:hire_harmony/views/widgets/customer/view_all_categories.dart';
-
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:cloud_firestore/cloud_firestore.dart';
 class CusHomePage extends StatefulWidget {
   const CusHomePage({super.key});
 
@@ -35,10 +38,106 @@ List<String> categoriesToUpdate = [
   void initState() {
     super.initState();
     _checkUserLocation();
-    getUserCategories('A2oGAPpXlBOOqKlR6jgC3xUK3003');
+   /* getUserCategories('A2oGAPpXlBOOqKlR6jgC3xUK3003');*/
     /*updateSpecificCategoriesWithWorkers(categoriesToUpdate);*/
   }
  
+
+void fetchAndPrintUserLocation(String userId) async {
+  Map<String, String>? location = await getCityAndCountry(userId);
+  if (location != null) {
+    print("المدينة: ${location['city']}, الدولة: ${location['country']}");
+  } else {
+    print("لم يتم العثور على الموقع.");
+  }
+}
+
+Future<Map<String, String>?> getCityAndCountry(String userId) async {
+  try {
+    // 1️⃣ Fetch user data from Firebase
+    DocumentSnapshot userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .get();
+
+    if (!userDoc.exists) {
+      print("❌ The user does not exist in the database.");
+      return null;
+    }
+
+    // 2️⃣ Check if the document has data
+    Map<String, dynamic>? userData = userDoc.data() as Map<String, dynamic>?;
+
+    if (userData == null || !userData.containsKey('location')) {
+      print("❌ 'location' field does not exist for this user.");
+      return null;
+    }
+
+    Map<String, dynamic> locationData = userData['location'];
+
+    if (!locationData.containsKey('latitude') || !locationData.containsKey('longitude')) {
+      print("❌ 'latitude' or 'longitude' is missing in location data.");
+      return null;
+    }
+
+    // 3️⃣ Convert latitude and longitude to double
+    double latitude;
+    double longitude;
+    try {
+      latitude = double.parse(locationData['latitude']);
+      longitude = double.parse(locationData['longitude']);
+    } catch (e) {
+      print("❌ Error converting latitude/longitude to double: $e");
+      return null;
+    }
+
+    print("📍 Coordinates: Latitude = $latitude, Longitude = $longitude");
+
+    // 4️⃣ Call Google Geocoding API
+    final response = await http.get(
+      Uri.parse(
+          'https://maps.googleapis.com/maps/api/geocode/json?latlng=$latitude,$longitude&key=AIzaSyCyl4pNb6FhDky0Rad3z8GKDt4Un42ccP4'),
+    );
+
+    if (response.statusCode == 200) {
+      Map<String, dynamic> data = jsonDecode(response.body);
+
+      if (data['status'] == 'OK') {
+        List<dynamic> results = data['results'];
+
+        for (var result in results) {
+          List<dynamic> addressComponents = result['address_components'];
+
+          String? city;
+          String? country;
+
+          for (var component in addressComponents) {
+            List types = component['types'];
+            if (types.contains('locality')) {
+              city = component['long_name'];
+            } else if (types.contains('country')) {
+              country = component['long_name'];
+            }
+          }
+
+          if (city != null && country != null) {
+            return {'city': city, 'country': country};
+          }
+        }
+      } else {
+        print("❌ Google API error: ${data['status']}");
+      }
+    } else {
+      print("❌ Failed to fetch from Google Geocoding API: ${response.statusCode}");
+    }
+  } catch (e) {
+    print("❌ Error fetching data: $e");
+  }
+
+  return null;
+}
+
+
   Future<void> getUserCategories(String userID) async {
     try {
       FirebaseFirestore firestore = FirebaseFirestore.instance;
@@ -213,12 +312,18 @@ Future<void> updateSpecificCategoriesWithWorkers(List<String> categoryNames) asy
         actions: [
           IconButton(
             onPressed: () {
-              Navigator.push(
+            /*  Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => const CusNotificationsPage(),
                 ),
-              );
+                
+              );*/
+              Navigator.push(
+  context,
+  MaterialPageRoute(builder: (context) => const NearestUsersPage()), // ✅ الصحيح
+);
+
             },
             icon: const Icon(Icons.notifications),
             color: AppColors().white,

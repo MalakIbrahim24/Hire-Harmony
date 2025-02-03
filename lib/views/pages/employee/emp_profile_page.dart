@@ -171,12 +171,12 @@ class _EmpProfilePageState extends State<EmpProfilePage> {
                         title: 'Map',
                         icon: Icons.person,
                         onTap: () {
-                          Navigator.push(
+                       /*   Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => MapPage(),
                             ),
-                          );
+                          );*/
                         },
                       ),
                       EmpBuildMenuContainer(

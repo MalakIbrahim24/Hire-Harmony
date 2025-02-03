@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+/*import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hire_harmony/utils/app_colors.dart';
@@ -85,8 +85,19 @@ class EmployeesUnderCategoryPage extends StatelessWidget {
           }
           final employees = snapshot.data;
           if (employees == null || employees.isEmpty) {
-            return const Center(
-              child: Text('No employees found for this category'),
+            return  Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                   Image.asset(
+                     'lib/assets/images/logo_orange.PNG',
+                     width: 120, // Bigger logo for better visibility
+                     height: 120,
+                   ),
+                         const Text('No employees found for this category'),
+              
+                ],
+              ),
             );
           }
 
@@ -180,6 +191,363 @@ class EmployeesUnderCategoryPage extends StatelessWidget {
                         ),
                       ),
                     ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}*/
+import 'dart:math';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:hire_harmony/utils/app_colors.dart';
+import 'package:hire_harmony/views/pages/customer/view_emp_profile_page.dart';
+import 'package:hire_harmony/views/pages/map_page.dart';
+
+class EmployeesUnderCategoryPage extends StatefulWidget {
+  final String categoryName; // اسم الفئة
+
+  const EmployeesUnderCategoryPage({required this.categoryName, super.key});
+
+  @override
+  _EmployeesUnderCategoryPageState createState() =>
+      _EmployeesUnderCategoryPageState();
+}
+
+class _EmployeesUnderCategoryPageState
+    extends State<EmployeesUnderCategoryPage> {
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
+  bool filterByDistance = false; // 🔹 متغير لتفعيل الفلترة
+  Position? currentPosition; // 🔹 موقع المستخدم الحالي
+  String selectedFilter = "None"; // 🔹 الفلتر الافتراضي
+
+  @override
+  void initState() {
+    super.initState();
+    _getCurrentLocation();
+  }
+
+  /// 🔹 Fetch user location from Firestore
+  Future<void> _getCurrentLocation() async {
+    try {
+      final User? user =
+          FirebaseAuth.instance.currentUser; // ✅ Get current user
+      if (user == null) {
+        print("❌ No authenticated user found.");
+        return;
+      }
+
+      final String userId = user.uid; // ✅ Get user UID from FirebaseAuth
+      DocumentSnapshot userDoc =
+          await firestore.collection('users').doc(userId).get();
+
+      if (userDoc.exists) {
+        final data = userDoc.data() as Map<String, dynamic>;
+
+        if (data.containsKey('location') &&
+            data['location'] is Map<String, dynamic>) {
+          var location = data['location'] as Map<String, dynamic>;
+          double latitude =
+              double.tryParse(location['latitude'].toString()) ?? 0.0;
+          double longitude =
+              double.tryParse(location['longitude'].toString()) ?? 0.0;
+
+          if (latitude != 0.0 && longitude != 0.0) {
+            setState(() {
+              currentPosition = Position(
+                latitude: latitude,
+                longitude: longitude,
+                timestamp: DateTime.now(),
+                accuracy: 0.0,
+                altitude: 0.0,
+                altitudeAccuracy: 0.0, // ✅ Required parameter
+                heading: 0.0,
+                headingAccuracy: 0.0, // ✅ Required parameter
+                speed: 0.0,
+                speedAccuracy: 0.0,
+              );
+            });
+
+            print("✅ Location fetched from Firestore: ($latitude, $longitude)");
+          } else {
+            print("⚠ Location data is invalid.");
+          }
+        } else {
+          print("⚠ Location field is missing in Firestore.");
+        }
+      } else {
+        print("❌ User document not found.");
+      }
+    } catch (e) {
+      print("❌ Error getting location from Firestore: $e");
+    }
+  }
+
+  /// 🔹 حساب المسافة بين نقطتين باستخدام معادلة Haversine
+  double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+    const R = 6371;
+    double dLat = (lat2 - lat1) * pi / 180.0;
+    double dLon = (lon2 - lon1) * pi / 180.0;
+
+    double a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1 * pi / 180.0) *
+            cos(lat2 * pi / 180.0) *
+            sin(dLon / 2) *
+            sin(dLon / 2);
+
+    double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    return R * c;
+  }
+
+  Future<List<Map<String, dynamic>>> fetchEmployeesByCategory(
+      String categoryName) async {
+    try {
+      QuerySnapshot categorySnapshot = await firestore
+          .collection('categories')
+          .where('name', isEqualTo: categoryName)
+          .get();
+
+      if (categorySnapshot.docs.isEmpty) {
+        print("⚠ No category found with name: $categoryName");
+        return [];
+      }
+
+      DocumentSnapshot categoryDoc = categorySnapshot.docs.first;
+      List<dynamic> workerIds = categoryDoc['workers'] ?? [];
+
+      if (workerIds.isEmpty) {
+        print("⚠ No workers found for category: $categoryName");
+        return [];
+      }
+
+      QuerySnapshot usersSnapshot = await firestore
+          .collection('users')
+          .where(FieldPath.documentId, whereIn: workerIds)
+          .get();
+
+      List<Map<String, dynamic>> employees = usersSnapshot.docs.map((userDoc) {
+        final data = userDoc.data() as Map<String, dynamic>;
+
+        double distance = 0.0;
+        double rating = data.containsKey('rating') && data['rating'] is num
+            ? data['rating'].toDouble()
+            : 0.0; // ✅ إذا لم يكن موجودًا، يتم تعيينه إلى 0.0
+
+        // 🟠 التحقق من وجود موقع الموظف قبل حساب المسافة
+        if (currentPosition != null &&
+            data.containsKey('location') &&
+            data['location'] is Map<String, dynamic>) {
+          var location = data['location'] as Map<String, dynamic>;
+          double lat = double.tryParse(location['latitude'].toString()) ?? 0.0;
+          double lon = double.tryParse(location['longitude'].toString()) ?? 0.0;
+
+          if (lat != 0.0 && lon != 0.0) {
+            distance = calculateDistance(currentPosition!.latitude,
+                currentPosition!.longitude, lat, lon);
+          }
+        }
+
+        return {
+          'uid': userDoc.id,
+          ...data,
+          'distance': distance,
+          'rating': rating, // ✅ تمت إضافة الريتينج هنا
+        };
+      }).toList();
+
+      if (selectedFilter == "Near") {
+        employees.sort((a, b) => a['distance'].compareTo(b['distance']));
+      } else if (selectedFilter == "Rating") {
+        employees.sort((a, b) => b['rating'].compareTo(a['rating']));
+      }
+
+      return employees;
+    } catch (e) {
+      print("❌ Error fetching employees: $e");
+      return [];
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'Employees for ${widget.categoryName}',
+          style: GoogleFonts.montserratAlternates(
+            color: AppColors().white,
+          ),
+        ),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: AppColors().white),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        backgroundColor: AppColors().orange,
+        actions: [
+          PopupMenuButton<String>(
+            icon: Icon(Icons.filter_list, color: AppColors().white),
+            onSelected: (String value) {
+              setState(() {
+                selectedFilter = value;
+              });
+            },
+            itemBuilder: (BuildContext context) => [
+              const PopupMenuItem(
+                value: "None",
+                child: Text("No Filter"),
+              ),
+              const PopupMenuItem(
+                value: "Near",
+                child: Text("Sort by Distance"),
+              ),
+              const PopupMenuItem(
+                value: "Rating",
+                child: Text("Sort by Rating"),
+              ),
+            ],
+          ),
+        ],
+      ),
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: fetchEmployeesByCategory(widget.categoryName),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(
+              child: Text('Error: ${snapshot.error}'),
+            );
+          }
+          final employees = snapshot.data;
+          if (employees == null || employees.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset(
+                    'lib/assets/images/logo_orange.PNG',
+                    width: 120,
+                    height: 120,
+                  ),
+                  const Text('No employees found for this category'),
+                ],
+              ),
+            );
+          }
+
+          return ListView.builder(
+            itemCount: employees.length,
+            itemBuilder: (context, index) {
+              final employee = employees[index];
+              final employeeName = employee['name'] ?? 'Unknown Employee';
+              final employeeImg = employee['img'] ?? '';
+              final employeeId = employee['uid'];
+              final employeerating = employee['rating'];
+                      debugPrint("Logged deleted service under admin $employeerating");
+
+
+              return InkWell(
+
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          ViewEmpProfilePage(employeeId: employeeId),
+                    ),
+                  );
+                },
+                child: Card(
+                  color: Colors.white,
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 30,
+                              backgroundImage: employeeImg.isNotEmpty
+                                  ? NetworkImage(employeeImg)
+                                  : null,
+                              backgroundColor: AppColors().navy,
+                              child: employeeImg.isEmpty
+                                  ? const Icon(Icons.person,
+                                      color: Colors.white)
+                                  : null,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    employeeName,
+                                    style: GoogleFonts.montserratAlternates(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                  // 🟢 عرض المسافة حتى لو لم يتم اختيار فلتر "Near"
+                                  Text(
+                                    "Distance: ${employee['distance'].toStringAsFixed(2)} km",
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                  
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.arrow_forward_ios,
+                                color: Colors.grey),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    MapScreen(employeeId: employeeId),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors().orange,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 12),
+                          ),
+                          child: const Text(
+                            'See Location',
+                            style: TextStyle(color: Colors.white, fontSize: 14),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );

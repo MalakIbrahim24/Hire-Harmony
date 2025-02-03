@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hire_harmony/utils/app_colors.dart';
 import 'package:hire_harmony/views/widgets/customer/build_menu_container.dart';
 import 'package:hire_harmony/views/widgets/customer/state_item.dart';
@@ -17,11 +18,17 @@ class _CusProfilePageState extends State<CusProfilePage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   Map<String, dynamic>? userData;
+  int orderCount = 0;
+  int ticketCount = 0;
+  int pendingRequestCount = 0;
 
   @override
   void initState() {
     super.initState();
     _fetchUserData();
+    _fetchOrderCount();
+    _fetchTicketCount();
+    _fetchPendingRequestCount();
   }
 
   Future<void> _fetchUserData() async {
@@ -38,6 +45,66 @@ class _CusProfilePageState extends State<CusProfilePage> {
         }
       } catch (e) {
         debugPrint('Error fetching user data: $e');
+      }
+    }
+  }
+
+  Future<void> _fetchOrderCount() async {
+    final User? currentUser = _auth.currentUser;
+
+    if (currentUser != null) {
+      try {
+        final QuerySnapshot ordersSnapshot = await _firestore
+            .collection('users')
+            .doc(currentUser.uid)
+            .collection('completedOrders')
+            .get();
+
+        setState(() {
+          orderCount = ordersSnapshot.size;
+        });
+      } catch (e) {
+        debugPrint('Error fetching orders count: $e');
+      }
+    }
+  }
+
+  Future<void> _fetchTicketCount() async {
+    final User? currentUser = _auth.currentUser;
+
+    if (currentUser != null) {
+      try {
+        final QuerySnapshot ticketsSnapshot = await _firestore
+            .collection('ticketsSent')
+            .where('uid', isEqualTo: currentUser.uid)
+            .get();
+
+        setState(() {
+          ticketCount = ticketsSnapshot.size;
+        });
+      } catch (e) {
+        debugPrint('Error fetching tickets count: $e');
+      }
+    }
+  }
+
+  Future<void> _fetchPendingRequestCount() async {
+    final User? currentUser = _auth.currentUser;
+
+    if (currentUser != null) {
+      try {
+        final QuerySnapshot requestsSnapshot = await _firestore
+            .collection('users')
+            .doc(currentUser.uid)
+            .collection('sentRequests')
+            .where('status', isEqualTo: 'pending')
+            .get();
+
+        setState(() {
+          pendingRequestCount = requestsSnapshot.size;
+        });
+      } catch (e) {
+        debugPrint('Error fetching pending requests count: $e');
       }
     }
   }
@@ -75,12 +142,19 @@ class _CusProfilePageState extends State<CusProfilePage> {
                   const SizedBox(height: 10),
                   Text(
                     userData!['name'] ?? 'Unnamed User',
-                    style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold),
+                    style: GoogleFonts.montserratAlternates(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w500,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                   ),
                   Text(
                     userData!['email'] ?? 'No email provided',
-                    style: const TextStyle(color: Colors.grey),
+                    style: GoogleFonts.montserratAlternates(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                   ),
                   const SizedBox(height: 20),
                   Container(
@@ -97,12 +171,18 @@ class _CusProfilePageState extends State<CusProfilePage> {
                         ),
                       ],
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        StatItem(label: ' Orders \n Complete', value: '20'),
-                        StatItem(label: ' Support \n Tickets', value: '2'),
-                        StatItem(label: ' Pending \n Requests', value: '5'),
+                        StatItem(
+                            label: ' Orders \n Complete',
+                            value: orderCount.toString()),
+                        StatItem(
+                            label: ' Support \n Tickets',
+                            value: ticketCount.toString()),
+                        StatItem(
+                            label: ' Pending \n Requests',
+                            value: pendingRequestCount.toString()),
                       ],
                     ),
                   ),

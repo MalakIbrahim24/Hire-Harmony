@@ -33,22 +33,51 @@ class _SignUpPageState extends State<SignUpPage> {
   @override
   void initState() {
     super.initState();
+    print("initState called");
     fetchCategories();
   }
 
   Future<void> fetchCategories() async {
-    final querySnapshot =
-        await FirebaseFirestore.instance.collection('categories').get();
+    print("fetchCategories() called");
 
-    final categories = querySnapshot.docs.map((doc) {
-      return SelectedListItem<String>(
-        data: doc['name'] as String,
-      );
-    }).toList();
+    if (!mounted) {
+      print("Widget is not mounted. Exiting fetchCategories()");
+      return;
+    }
 
-    setState(() {
-      categoryItems = categories;
-    });
+    try {
+      final querySnapshot =
+          await FirebaseFirestore.instance.collection('categories').get();
+
+      print("Query snapshot received: ${querySnapshot.docs.length} documents");
+
+      final categories = querySnapshot.docs
+          .map((doc) {
+            if (doc.data().containsKey('name')) {
+              print("Fetched category: ${doc['name']}");
+              return SelectedListItem<String>(
+                data: doc['name'] as String,
+              );
+            } else {
+              print(
+                  "Skipping document with missing 'name' field: ${doc.id}");
+              return null; // Skip documents with missing 'name'
+            }
+          })
+          .where((item) => item != null)
+          .cast<SelectedListItem<String>>()
+          .toList();
+
+      if (!mounted) return;
+
+      setState(() {
+        categoryItems = categories;
+      });
+
+      print("Categories updated in state: $categoryItems");
+    } catch (e) {
+      print("Error fetching categories: $e");
+    }
   }
 
   String? validateUserName(String value) {
@@ -406,6 +435,8 @@ class _SignUpPageState extends State<SignUpPage> {
                                               (List<SelectedListItem<String>>
                                                   selectedItems) {
                                             setState(() {
+                                              debugPrint(
+                                                  categoryItems.toString());
                                               selectedCategoryItems =
                                                   selectedItems;
                                             });

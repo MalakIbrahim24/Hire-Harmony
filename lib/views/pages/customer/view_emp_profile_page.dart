@@ -7,6 +7,7 @@ import 'package:hire_harmony/views/pages/chatePage.dart';
 //import 'package:hire_harmony/views/pages/chatePage.dart';
 //import 'package:hire_harmony/views/pages/chatePage.dart';
 import 'package:hire_harmony/views/pages/employee/reviews_page.dart';
+import 'package:hire_harmony/views/pages/map_page.dart';
 import 'package:hire_harmony/views/widgets/customer/cus_photo_tab_view.dart';
 import 'package:hire_harmony/views/widgets/employee/reviews_tab_view.dart';
 
@@ -191,6 +192,61 @@ class _ViewEmpProfilePageState extends State<ViewEmpProfilePage>
                             ),
                           ],
                         ),
+                        if (employeeData!.containsKey('Address') &&
+                            employeeData!['Address'] != null)
+                          Padding(
+                            padding: const EdgeInsets.only(
+                                top: 8.0), // مسافة صغيرة قبل العنوان
+                            child: Center(
+                              child: Text(
+                                employeeData![
+                                    'Address'], // عرض العنوان من Firestore
+                                style: GoogleFonts.montserratAlternates(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors().orange,
+                                ),
+                              ),
+                            ),
+                          ),
+                        if (employeeData!.containsKey('location') &&
+                            employeeData!['location'] != null &&
+                            employeeData!['location']['latitude'] != null &&
+                            employeeData!['location']['longitude'] != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 16.0),
+                            child: Center(
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => MapScreen(
+                                          employeeId: widget.employeeId),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.location_on,
+                                    color: Colors.white),
+                                label: Text(
+                                  'See Location',
+                                  style: GoogleFonts.montserratAlternates(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors().orange,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(24),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -249,8 +305,8 @@ class _ViewEmpProfilePageState extends State<ViewEmpProfilePage>
                           children: services.map((service) {
                             return Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
+                                  horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
                                 color: AppColors().orange.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
@@ -330,7 +386,6 @@ class _ViewEmpProfilePageState extends State<ViewEmpProfilePage>
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-               
                   const SizedBox(width: 16),
                   ElevatedButton(
                     onPressed: isAvailable

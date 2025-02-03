@@ -28,6 +28,7 @@ import 'package:hire_harmony/views/pages/employee/emp_navbar.dart';
 import 'package:hire_harmony/views/pages/employee/emp_notifications_page.dart';
 import 'package:hire_harmony/views/pages/employee/emp_profile_info_page.dart';
 //import 'package:hire_harmony/views/pages/forms/emp_sign_up_form.dart';
+import 'package:hire_harmony/views/pages/signup/sign_up_page.dart';
 import 'package:hire_harmony/views/pages/customer/cus_verification_success_page.dart';
 import 'package:hire_harmony/views/pages/customer/cus_messages_page.dart';
 import 'package:hire_harmony/views/pages/customer/cus_notifications_page.dart';
@@ -37,6 +38,7 @@ import 'package:hire_harmony/views/pages/employee/emp_verification_success_page.
 import 'package:hire_harmony/views/pages/employee/emp_home_page.dart';
 import 'package:hire_harmony/views/pages/signup/forgot_password_page.dart';
 import 'package:hire_harmony/views/pages/login/login_page.dart';
+import 'package:hire_harmony/views/pages/employee/emp_id_verification_page.dart';
 //import 'package:hire_harmony/views/pages/employee/emp_phone_page.dart';
 import 'package:hire_harmony/views/pages/signup/phone_page.dart';
 import 'package:hire_harmony/views/pages/signup/sign_up_choice.dart';
@@ -63,12 +65,11 @@ class AppRouter {
           builder: (_) => const LoginPage(),
           settings: settings,
         );
-        /*
       case AppRoutes.signUpPage:
         return MaterialPageRoute(
           builder: (_) => const SignUpPage(),
           settings: settings,
-        );*/
+        );
       // case AppRoutes.empSignupForm:
       //   return MaterialPageRoute(
       //     builder: (_) => const EmpSignupForm(),
@@ -144,7 +145,7 @@ class AppRouter {
           settings: settings,
         );
 
-    /*  case AppRoutes.empidverificationPage:
+     /* case AppRoutes.empidverificationPage:
         return MaterialPageRoute(
           builder: (_) => const EmpIdVerificationPage(),
           settings: settings,
@@ -152,12 +153,9 @@ class AppRouter {
 */
       case AppRoutes.empProfileInfoPage:
         return MaterialPageRoute(
-          builder: (_) => EmpProfileInfoPage( employeeId: FirebaseAuth.instance.currentUser!.uid),
-          settings: settings,
-        );
-        case AppRoutes.complaintsPage:
-        return MaterialPageRoute(
-          builder: (_) => const ComplaintsPage(),
+          builder: (_) =>  EmpProfileInfoPage(
+             employeeId: FirebaseAuth.instance.currentUser!.uid
+          ),
           settings: settings,
         );
       case AppRoutes.accountDeletionScreen:
@@ -165,15 +163,24 @@ class AppRouter {
           builder: (_) => const AccountDeletionScreen(),
           settings: settings,
         );
-      
       case AppRoutes.contactUsPage:
         return MaterialPageRoute(
           builder: (_) => const ContactUsPage(),
           settings: settings,
         );
+           case AppRoutes.empaccountDeletionScreen:
+        return MaterialPageRoute(
+          builder: (_) => const EmpAccountDeletionScreen(),
+          settings: settings,
+        );
       case AppRoutes.adnhomePage:
         return MaterialPageRoute(
           builder: (_) => const admin.AdnHomePage(),
+          settings: settings,
+        );
+         case AppRoutes.complaintsPage:
+        return MaterialPageRoute(
+          builder: (_) => const ComplaintsPage(),
           settings: settings,
         );
       case AppRoutes.adnnavPage:
@@ -194,11 +201,6 @@ class AppRouter {
       case AppRoutes.adManagementPage:
         return MaterialPageRoute(
           builder: (_) => const AdManagementPage(),
-          settings: settings,
-        );
-        case AppRoutes.empaccountDeletionScreen:
-        return MaterialPageRoute(
-          builder: (_) => const EmpAccountDeletionScreen(),
           settings: settings,
         );
       case AppRoutes.categoryManagementPage:

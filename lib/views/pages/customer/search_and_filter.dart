@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:hire_harmony/services/firestore_services.dart';
 import 'package:hire_harmony/utils/app_colors.dart';
 import 'package:hire_harmony/views/pages/customer/view_emp_profile_page.dart';
+import 'package:hire_harmony/views/pages/map_page.dart';
 
 class SearchAndFilter extends StatefulWidget {
   const SearchAndFilter({super.key});
@@ -117,6 +118,8 @@ class _SearchAndFilterState extends State<SearchAndFilter> {
             'location': data['location'].toString() ?? 'Unknown',
             'rating': data['rating'] ?? 0,
             'reviewsNum': data['reviewsNum'] ?? 0,
+            'about': data['about'] ??
+                'No description available', // ✅ إضافة الـ about هنا
           },
           queryBuilder: (query) => query.where('role', isEqualTo: 'employee'),
         ),
@@ -204,9 +207,10 @@ class _SearchAndFilterState extends State<SearchAndFilter> {
                               const SizedBox(width: 8),
                               Text(
                                 employee['name'],
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
+                                  color: AppColors().navy,
                                 ),
                               ),
                             ],
@@ -216,25 +220,38 @@ class _SearchAndFilterState extends State<SearchAndFilter> {
                               const Icon(Icons.star,
                                   color: Colors.amber, size: 20),
                               const SizedBox(width: 8),
-                             Text(
-  '${employee['rating']?.toString() ?? '0.0'} (${employee['reviewsNum']?.toString() ?? '0'}) reviews',
-  style: TextStyle(
-    fontSize: 13,
-    color: Theme.of(context).colorScheme.primary,
-  ),
-),
-
+                              Text(
+                                '${employee['rating']?.toString() ?? '0.0'} (${employee['reviewsNum']?.toString() ?? '0'}) reviews',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              ),
                             ],
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.location_on, size: 20),
+                          const Icon(Icons.info_outline,
+                              color: Colors.orange,
+                              size: 20), // أيقونة للمعلومات
                           const SizedBox(width: 8),
-                          Text(employee['location'] ?? 'Unknown location',
-                              style: const TextStyle(fontSize: 13)),
+                          Expanded(
+                            child: Text(
+                              employee['about'] ?? 'no description add',
+                              style: TextStyle(
+                                color: AppColors().grey2,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                              maxLines: 3, // الحد الأقصى للأسطر
+                              overflow: TextOverflow
+                                  .ellipsis, // إضافة "..." إذا كان النص طويلًا
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 10),
