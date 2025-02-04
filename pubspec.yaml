@@ -54,11 +54,20 @@ dependencies:
   provider: ^6.1.2
   shared_preferences: ^2.4.0
   supabase_flutter: ^2.8.3
+  shimmer: ^3.0.0
 
 dev_dependencies:
   flutter_lints: ^4.0.0
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.14.3
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "lib/assets/images/logo_white_brown_shadow.PNG"  # المسار إلى صورة الأيقونة الخاصة بك
+  adaptive_icon_background: "#FF6404" # خلفية الأيقونة (للأندرويد)
+  adaptive_icon_foreground: "lib/assets/images/logo_white_brown_shadow.PNG"
 
 flutter:
   uses-material-design: true

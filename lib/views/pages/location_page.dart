@@ -44,6 +44,7 @@ class _LocationPageState extends State<LocationPage> {
       Get.offAll(() => const WelcomePage()); 
     }
   }
+//تحسين بنعملو بس نخلص الستريم المغلق
 
   Future<void> fetchLocationDetails(String latitude, String longitude) async {
     const apiKey = "AIzaSyCyl4pNb6FhDky0Rad3z8GKDt4Un42ccP4"; 

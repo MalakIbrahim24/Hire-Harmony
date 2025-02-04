@@ -210,6 +210,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:hire_harmony/utils/app_colors.dart';
 import 'package:hire_harmony/views/pages/customer/view_emp_profile_page.dart';
 import 'package:hire_harmony/views/pages/map_page.dart';
+import 'package:hire_harmony/views/widgets/employee/shimmer.dart';
+import 'package:shimmer/shimmer.dart';
 
 class EmployeesUnderCategoryPage extends StatefulWidget {
   final String categoryName; // اسم الفئة
@@ -332,15 +334,20 @@ class _EmployeesUnderCategoryPageState
           .where(FieldPath.documentId, whereIn: workerIds)
           .get();
 
-      List<Map<String, dynamic>> employees = usersSnapshot.docs.map((userDoc) {
+      List<Map<String, dynamic>> employees = [];
+
+      for (var userDoc in usersSnapshot.docs) {
         final data = userDoc.data() as Map<String, dynamic>;
 
         double distance = 0.0;
-        double rating = data.containsKey('rating') && data['rating'] is num
-            ? data['rating'].toDouble()
-            : 0.0; // ✅ إذا لم يكن موجودًا، يتم تعيينه إلى 0.0
+        double rating = 0.0;
 
-        // 🟠 التحقق من وجود موقع الموظف قبل حساب المسافة
+        // ✅ تحويل rating من String إلى double
+        if (data.containsKey('rating') && data['rating'] is String) {
+          rating = double.tryParse(data['rating'].toString()) ?? 0.0;
+        }
+
+        // ✅ حساب المسافة إذا كان الموقع متاحًا
         if (currentPosition != null &&
             data.containsKey('location') &&
             data['location'] is Map<String, dynamic>) {
@@ -354,13 +361,13 @@ class _EmployeesUnderCategoryPageState
           }
         }
 
-        return {
+        employees.add({
           'uid': userDoc.id,
           ...data,
           'distance': distance,
-          'rating': rating, // ✅ تمت إضافة الريتينج هنا
-        };
-      }).toList();
+          'rating': rating, 
+        });
+      }
 
       if (selectedFilter == "Near") {
         employees.sort((a, b) => a['distance'].compareTo(b['distance']));
@@ -421,8 +428,9 @@ class _EmployeesUnderCategoryPageState
         future: fetchEmployeesByCategory(widget.categoryName),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+           return const ShimmerPage();
+           }
+
           if (snapshot.hasError) {
             return Center(
               child: Text('Error: ${snapshot.error}'),
@@ -444,7 +452,6 @@ class _EmployeesUnderCategoryPageState
               ),
             );
           }
-
           return ListView.builder(
             itemCount: employees.length,
             itemBuilder: (context, index) {
@@ -452,12 +459,10 @@ class _EmployeesUnderCategoryPageState
               final employeeName = employee['name'] ?? 'Unknown Employee';
               final employeeImg = employee['img'] ?? '';
               final employeeId = employee['uid'];
-              final employeerating = employee['rating'];
-                      debugPrint("Logged deleted service under admin $employeerating");
-
+              final employeeRating =
+                  employee['rating']; // ✅ الريتينج الآن double
 
               return InkWell(
-
                 onTap: () {
                   Navigator.push(
                     context,
@@ -506,7 +511,6 @@ class _EmployeesUnderCategoryPageState
                                       color: Colors.black,
                                     ),
                                   ),
-                                  // 🟢 عرض المسافة حتى لو لم يتم اختيار فلتر "Near"
                                   Text(
                                     "Distance: ${employee['distance'].toStringAsFixed(2)} km",
                                     style: const TextStyle(
@@ -514,7 +518,23 @@ class _EmployeesUnderCategoryPageState
                                       color: Colors.grey,
                                     ),
                                   ),
-                                  
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.star,
+                                          color: Colors.orange, size: 16),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        employeeRating.toStringAsFixed(
+                                            1), // ✅ عرض الريتينج بعد تحويله
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ],
                               ),
                             ),

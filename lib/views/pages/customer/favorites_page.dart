@@ -60,7 +60,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
             color: Theme.of(context).colorScheme.primary,
           ),
         ),
-      backgroundColor: Theme.of(context).colorScheme.surface,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         iconTheme: IconThemeData(color: AppColors().navy),
       ),
@@ -81,8 +81,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
               child: Text(
                 'No favorites added yet!',
                 style: GoogleFonts.montserratAlternates(
-                color: Theme.of(context).colorScheme.primary,
-
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
             );
@@ -123,8 +122,49 @@ class _FavoritesPageState extends State<FavoritesPage> {
                       favorite['img'] ?? 'https://via.placeholder.com/150',
                     ),
                   ),
-                  title: Text(favorite['name'] ?? 'Unnamed Employee'),
-                  subtitle: Text(favorite['location'] ?? 'Unknown location'),
+                  title: Text(
+                    favorite['name'] is String
+                        ? favorite['name']
+                        : 'Unnamed Employee',
+                    style: GoogleFonts.montserratAlternates(
+                      fontSize: 14,
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 8), // مسافة بين النص والزر
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors().orange,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ViewEmpProfilePage(
+                                employeeId: favoriteId,
+                              ),
+                            ),
+                          );
+                        },
+                        child: Text(
+                          'View Profile',
+                          style: GoogleFonts.montserratAlternates(
+                            textStyle: TextStyle(
+                              fontSize: 14,
+                              color: AppColors().white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                   trailing: IconButton(
                     icon: const Icon(
                       Icons.favorite,

@@ -5,11 +5,9 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hire_harmony/api/firebase_api.dart';
 import 'package:hire_harmony/utils/app_colors.dart';
-import 'package:hire_harmony/views/pages/customer/cus_notifications_page.dart';
 import 'package:hire_harmony/views/pages/customer/search_and_filter.dart';
 import 'package:hire_harmony/views/pages/customer/view_all_popular_services.dart';
 import 'package:hire_harmony/views/pages/location_page.dart';
-import 'package:hire_harmony/views/pages/near_page.dart';
 import 'package:hire_harmony/views/widgets/customer/best_worker.dart';
 import 'package:hire_harmony/views/widgets/customer/category_widget.dart';
 import 'package:hire_harmony/views/widgets/customer/custom_carousel_indicator.dart';
@@ -17,9 +15,7 @@ import 'package:hire_harmony/views/widgets/customer/invite_link_dialog.dart';
 import 'package:hire_harmony/views/widgets/customer/populer_service.dart';
 import 'package:hire_harmony/views/widgets/customer/view_all_best_workers_page.dart';
 import 'package:hire_harmony/views/widgets/customer/view_all_categories.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 class CusHomePage extends StatefulWidget {
   const CusHomePage({super.key});
 
@@ -29,272 +25,135 @@ class CusHomePage extends StatefulWidget {
 
 class _CusHomePageState extends State<CusHomePage> {
   final String? userId = FirebaseAuth.instance.currentUser?.uid;
-List<String> categoriesToUpdate = [
-    "Plumbers, Pipefitters, and Steamfitters",
-    "Makeup Artists, Theatrical and Performance",
-    "Tutors"
-  ];
+  String _userName = "User";
+
   @override
   void initState() {
     super.initState();
     _checkUserLocation();
-   /* getUserCategories('A2oGAPpXlBOOqKlR6jgC3xUK3003');*/
-    /*updateSpecificCategoriesWithWorkers(categoriesToUpdate);*/
+    /* updateCategoryWorkerCounts();*/
+    _fetchUserName();
   }
- 
 
-void fetchAndPrintUserLocation(String userId) async {
-  Map<String, String>? location = await getCityAndCountry(userId);
-  if (location != null) {
-    print("المدينة: ${location['city']}, الدولة: ${location['country']}");
-  } else {
-    print("لم يتم العثور على الموقع.");
-  }
-}
+  void _fetchUserName() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users') // Change this to your Firestore collection name
+          .doc(user.uid)
+          .get();
 
-Future<Map<String, String>?> getCityAndCountry(String userId) async {
-  try {
-    // 1️⃣ Fetch user data from Firebase
-    DocumentSnapshot userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .get();
-
-    if (!userDoc.exists) {
-      print("❌ The user does not exist in the database.");
-      return null;
-    }
-
-    // 2️⃣ Check if the document has data
-    Map<String, dynamic>? userData = userDoc.data() as Map<String, dynamic>?;
-
-    if (userData == null || !userData.containsKey('location')) {
-      print("❌ 'location' field does not exist for this user.");
-      return null;
-    }
-
-    Map<String, dynamic> locationData = userData['location'];
-
-    if (!locationData.containsKey('latitude') || !locationData.containsKey('longitude')) {
-      print("❌ 'latitude' or 'longitude' is missing in location data.");
-      return null;
-    }
-
-    // 3️⃣ Convert latitude and longitude to double
-    double latitude;
-    double longitude;
-    try {
-      latitude = double.parse(locationData['latitude']);
-      longitude = double.parse(locationData['longitude']);
-    } catch (e) {
-      print("❌ Error converting latitude/longitude to double: $e");
-      return null;
-    }
-
-    print("📍 Coordinates: Latitude = $latitude, Longitude = $longitude");
-
-    // 4️⃣ Call Google Geocoding API
-    final response = await http.get(
-      Uri.parse(
-          'https://maps.googleapis.com/maps/api/geocode/json?latlng=$latitude,$longitude&key=AIzaSyCyl4pNb6FhDky0Rad3z8GKDt4Un42ccP4'),
-    );
-
-    if (response.statusCode == 200) {
-      Map<String, dynamic> data = jsonDecode(response.body);
-
-      if (data['status'] == 'OK') {
-        List<dynamic> results = data['results'];
-
-        for (var result in results) {
-          List<dynamic> addressComponents = result['address_components'];
-
-          String? city;
-          String? country;
-
-          for (var component in addressComponents) {
-            List types = component['types'];
-            if (types.contains('locality')) {
-              city = component['long_name'];
-            } else if (types.contains('country')) {
-              country = component['long_name'];
-            }
-          }
-
-          if (city != null && country != null) {
-            return {'city': city, 'country': country};
-          }
-        }
-      } else {
-        print("❌ Google API error: ${data['status']}");
+      if (userDoc.exists) {
+        setState(() {
+          _userName = userDoc.data()?['name'] ?? "User"; // Fetch name field
+        });
       }
-    } else {
-      print("❌ Failed to fetch from Google Geocoding API: ${response.statusCode}");
     }
-  } catch (e) {
-    print("❌ Error fetching data: $e");
   }
 
-  return null;
-}
+  Future<void> updateCategoryWorkerCounts() async {
+    FirebaseFirestore firestore = FirebaseFirestore.instance;
 
+    // استرجاع جميع الكاتيجوري
+    QuerySnapshot categoriesSnapshot =
+        await firestore.collection('categories').get();
 
-  Future<void> getUserCategories(String userID) async {
-    try {
-      FirebaseFirestore firestore = FirebaseFirestore.instance;
+    // خريطة لحفظ عدد العمال لكل كاتيجوري
+    Map<String, int> categoryWorkerCount = {};
 
-      // 🔹 البحث عن وثيقة `empcategories` داخل `users` لهذا المستخدم
+    // تحضير جميع الكاتيجوري من قاعدة البيانات
+    for (var categoryDoc in categoriesSnapshot.docs) {
+      String categoryId = categoryDoc.id;
+      categoryWorkerCount[categoryId] = 0; // تعيين العدد مبدئيًا 0
+    }
+
+    // استرجاع جميع المستخدمين
+    QuerySnapshot usersSnapshot = await firestore.collection('users').get();
+
+    for (var userDoc in usersSnapshot.docs) {
+      String userId = userDoc.id;
+
+      // جلب كوليكشن `empcategories` لكل مستخدم
       QuerySnapshot empCategoriesSnapshot = await firestore
           .collection('users')
-          .doc(userID)
+          .doc(userId)
           .collection('empcategories')
           .get();
 
       if (empCategoriesSnapshot.docs.isEmpty) {
-        print("⚠️ لا توجد كاتيجوري للمستخدم $userID");
+        print("❌ المستخدم $userId ليس لديه أي كاتيجوري في empcategories");
+      } else {
+        print(
+            "✅ المستخدم $userId لديه ${empCategoriesSnapshot.docs.length} كاتيجوري في empcategories");
       }
 
-      // 🔹 استخراج جميع الكاتيجوريز من كل المستندات
-      List<String> allCategories = [];
+      for (var empCategoryDoc in empCategoriesSnapshot.docs) {
+        Map<String, dynamic> categoryData =
+            empCategoryDoc.data() as Map<String, dynamic>;
 
-      for (var doc in empCategoriesSnapshot.docs) {
-        List<dynamic> categories = doc['categories'] ?? [];
-        allCategories.addAll(categories.cast<String>());
-      }
+        if (!categoryData.containsKey('categories')) {
+          print(
+              "⚠️ تحذير: الوثيقة ${empCategoryDoc.id} في `empcategories` لا تحتوي على حقل 'categories'");
+          continue;
+        }
 
-      print("✅ الكاتيجوري الخاصة بالمستخدم $userID: $allCategories");
-      List<String> userCategories = allCategories;
-      decrementEmpNumForCategories(userCategories, userID);
-    } catch (e) {
-      print("❌ خطأ أثناء جلب الكاتيجوري للمستخدم $userID: $e");
-    }
-  }
+        List<dynamic> categoryNames = categoryData['categories'] ?? [];
 
-  Future<void> decrementEmpNumForCategories(List<String> categories, String employeeId) async {
-  FirebaseFirestore firestore = FirebaseFirestore.instance;
+        if (categoryNames.isEmpty) {
+          print("⚠️ تحذير: قائمة الكاتيجوري فارغة للمستخدم $userId");
+          continue;
+        }
 
-  for (String categoryName in categories) {
-    categoryName = categoryName.trim(); // 🔹 إزالة المسافات الإضافية
+        // التكرار على كل الكاتيجوري التي ينتمي إليها العامل
+        for (String categoryName in categoryNames) {
+          categoryName = categoryName.trim(); // إزالة أي مسافات زائدة
 
-    // 🔹 البحث عن الكاتيجوري في `categories`
-    QuerySnapshot categorySnapshot = await firestore
-        .collection('categories')
-        .where('name', isEqualTo: categoryName)
-        .get();
+          print("🔍 المستخدم $userId ينتمي إلى الكاتيجوري: $categoryName");
 
-    if (categorySnapshot.docs.isEmpty) {
-      print("⚠️ الكاتيجوري '$categoryName' غير موجودة في Firestore.");
-      continue; // ⏭ تخطي هذه الكاتيجوري
-    }
+          // البحث عن كاتيجوري بهذا الاسم في القائمة
+          for (var categoryDoc in categoriesSnapshot.docs) {
+            Map<String, dynamic> categoryDocData =
+                categoryDoc.data() as Map<String, dynamic>;
 
-    // 🔹 استخراج `ID` الخاص بالكاتيجوري
-    String categoryId = categorySnapshot.docs.first.id;
+            String categoryDocName =
+                categoryDocData['name']?.toString().trim() ?? '';
 
-    // 🔹 جلب بيانات الكاتيجوري
-    DocumentSnapshot categoryDoc =
-        await firestore.collection('categories').doc(categoryId).get();
-
-    if (!categoryDoc.exists) {
-      print("⚠️ الوثيقة الخاصة بـ '$categoryName' غير موجودة.");
-      continue;
-    }
-
-    Map<String, dynamic> categoryData =
-        categoryDoc.data() as Map<String, dynamic>;
-
-    // 🔹 الحصول على العدد الحالي للعمال
-    int currentEmpNum = (categoryData['empNum'] ?? 0) as int;
-
-    // 🔹 التحقق من أن العدد لن يصبح سالبًا بعد الحذف
-    int updatedEmpNum = (currentEmpNum > 0) ? currentEmpNum - 1 : 0;
-
-    // 🔹 تحديث `workers` وإزالة `employeeId` باستخدام `FieldValue.arrayRemove()`
-    await firestore.collection('categories').doc(categoryId).update({
-      'empNum': updatedEmpNum, // ✅ تحديث عدد العمال
-      'workers': FieldValue.arrayRemove([employeeId]), // ✅ إزالة الموظف من القائمة
-    });
-
-    print("✅ تم تحديث `empNum` إلى $updatedEmpNum وإزالة $employeeId من `workers` في '$categoryName'.");
-  }
-}
-
-
-
-/*
-Future<void> updateSpecificCategoriesWithWorkers(List<String> categoryNames) async {
-  try {
-    final FirebaseFirestore firestore = FirebaseFirestore.instance;
-
-    for (String categoryName in categoryNames) {
-      print("🔍 Processing category: $categoryName");
-
-      // 🔹 1. البحث عن الكاتيجوري في كوليكشن `categories`
-      QuerySnapshot categorySnapshot = await firestore
-          .collection('categories')
-          .where('name', isEqualTo: categoryName)
-          .get();
-
-      if (categorySnapshot.docs.isEmpty) {
-        print("⚠ No category found with name: $categoryName");
-        continue; // تخطي الكاتيجوري غير الموجودة
-      }
-
-      DocumentReference categoryRef = categorySnapshot.docs.first.reference;
-
-      List<String> workerIds = [];
-
-      // 🔹 2. جلب المستخدمين الذين لديهم `role = employee`
-      QuerySnapshot usersSnapshot = await firestore
-          .collection('users')
-          .where('role', isEqualTo: 'employee') // ✅ جلب الموظفين فقط
-          .get();
-
-      for (var userDoc in usersSnapshot.docs) {
-        // 🔹 البحث داخل `empcategories` لكل مستخدم
-        QuerySnapshot empCategoriesSnapshot = await userDoc.reference.collection('empcategories').get();
-
-        for (var empCategoryDoc in empCategoriesSnapshot.docs) {
-          List<dynamic> categories = empCategoryDoc['categories'] ?? [];
-
-          if (categories.contains(categoryName)) {
-            workerIds.add(userDoc.id);
-            print("✅ User ${userDoc.id} belongs to category: $categoryName");
-            break; // ✅ إذا وجدناه، لا داعي لمتابعة البحث داخل نفس المستخدم
+            if (categoryDocName == categoryName) {
+              String categoryId = categoryDoc.id;
+              categoryWorkerCount[categoryId] =
+                  (categoryWorkerCount[categoryId] ?? 0) + 1;
+              print(
+                  "✅ تم إضافة المستخدم $userId إلى الكاتيجوري $categoryDocName (ID: $categoryId)");
+            }
           }
         }
       }
-
-      if (workerIds.isEmpty) {
-        print("⚠ No workers found for category: $categoryName. Skipping update.");
-        continue;
-      }
-
-      // 🔹 3. تحديث `workers` في `categories`
-      await categoryRef.update({
-        'workers': workerIds,
-      });
-
-      print("✅ Updated category: $categoryName with ${workerIds.length} workers.");
     }
 
-    print("🎯 All specified categories updated successfully with workers.");
-  } catch (e) {
-    print("❌ Error updating categories: $e");
+    // طباعة النتائج للتحقق من التعداد
+    print("🔹 عدد العمال لكل كاتيجوري: $categoryWorkerCount");
+
+    // تحديث كل كاتيجوري بعدد العمال المرتبطين بها
+    for (var entry in categoryWorkerCount.entries) {
+      await firestore.collection('categories').doc(entry.key).update({
+        'empNum': entry.value,
+      });
+    }
+
+    print("✅ تم تحديث أعداد العمال لكل كاتيجوري بنجاح!");
   }
-}
-*/
 
   Future<void> _checkUserLocation() async {
-    await Future.delayed(const Duration(seconds: 5)); // الانتظار لمدة 10 ثوانٍ
+    await Future.delayed(const Duration(seconds: 10)); // الانتظار لمدة 10 ثوانٍ
 
     // افترض أن لديك Firebase API تتحقق من الموقع
     final isLocationSaved = await FirebaseApi().isUserLocationSaved(userId!);
     debugPrint(isLocationSaved.toString());
 
- if (!isLocationSaved) {
-  // تحويل المستخدم إلى صفحة الموقع باستخدام GetX
-  await Get.to(() => const LocationPage());
-}
-
+    if (!isLocationSaved) {
+      // تحويل المستخدم إلى صفحة الموقع باستخدام GetX
+      await Get.to(() => const LocationPage());
+    }
   }
 
   @override
@@ -309,37 +168,48 @@ Future<void> updateSpecificCategoriesWithWorkers(List<String> categoryNames) asy
         ),
         backgroundColor: AppColors().orange,
         centerTitle: true,
-        actions: [
-          IconButton(
-            onPressed: () {
-            /*  Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const CusNotificationsPage(),
-                ),
-                
-              );*/
-              Navigator.push(
-  context,
-  MaterialPageRoute(builder: (context) => const NearestUsersPage()), // ✅ الصحيح
-);
-
-            },
-            icon: const Icon(Icons.notifications),
-            color: AppColors().white,
-          )
-        ],
+        // actions: [
+        //   IconButton(
+        //     onPressed: () {
+        //       Navigator.push(
+        //         context,
+        //         MaterialPageRoute(
+        //           builder: (context) => const CusNotificationsPage(),
+        //         ),
+        //       );
+        //     },
+        //     icon: const Icon(Icons.notifications),
+        //     color: AppColors().white,
+        //   )
+        // ],
         title: Column(
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(
-                  Icons.location_on,
-                  color: AppColors().white,
+                Row(
+                  children: [
+                    Text(
+                      'Hi $_userName',
+                      style: GoogleFonts.montserratAlternates(
+                        fontSize: 20,
+                        color: AppColors().white,
+                      ),
+                    ),
+                    RichText(
+                        text: TextSpan(
+                      style: GoogleFonts.montserratAlternates(
+                        fontSize: 16,
+                        color: AppColors().navy, // Default color
+                      ),
+                    )),
+                  ],
                 ),
-                Text('Qalqiliya , palestine',
-                    style: GoogleFonts.montserratAlternates(
-                        color: AppColors().white, fontSize: 16)),
+                Image.asset(
+                  'lib/assets/images/logo_white_brown_shadow.PNG',
+                  width: 50, // Bigger logo for better visibility
+                  height: 50,
+                ),
               ],
             ),
           ],
@@ -362,7 +232,7 @@ Future<void> updateSpecificCategoriesWithWorkers(List<String> categoryNames) asy
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 15),
                     decoration: BoxDecoration(
-                       color: Theme.of(context).colorScheme.surface,      
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(30),
                     ),
                     child: GestureDetector(
@@ -401,8 +271,7 @@ Future<void> updateSpecificCategoriesWithWorkers(List<String> categoryNames) asy
           ),
           const Column(
             children: [
-       CustomCarouselIndicator(),
-
+              CustomCarouselIndicator(),
             ],
           ),
           Padding(
@@ -522,8 +391,10 @@ Future<void> updateSpecificCategoriesWithWorkers(List<String> categoryNames) asy
                       const SizedBox(height: 16),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors().white,
-                          foregroundColor: AppColors().navy,
+                          backgroundColor:
+                              Theme.of(context).colorScheme.surface,
+                          foregroundColor:
+                              Theme.of(context).colorScheme.primary,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
@@ -551,7 +422,7 @@ Future<void> updateSpecificCategoriesWithWorkers(List<String> categoryNames) asy
                               style: GoogleFonts.montserratAlternates(
                                 textStyle: TextStyle(
                                   fontSize: 14,
-                                  color: AppColors().navy,
+                                  color: Theme.of(context).colorScheme.primary,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -579,27 +450,6 @@ Future<void> updateSpecificCategoriesWithWorkers(List<String> categoryNames) asy
                           fontSize: 14,
                           color: Theme.of(context).colorScheme.primary,
                           fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    InkWell(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                const ViewAllBestWorkersPage(),
-                          ),
-                        );
-                      },
-                      child: Text(
-                        'View all >',
-                        style: GoogleFonts.montserratAlternates(
-                          textStyle: TextStyle(
-                            fontSize: 13,
-                            color: AppColors().orange,
-                            fontWeight: FontWeight.bold,
-                          ),
                         ),
                       ),
                     ),

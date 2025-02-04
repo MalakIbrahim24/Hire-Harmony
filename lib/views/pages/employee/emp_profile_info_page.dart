@@ -248,10 +248,10 @@ class _EmpProfileInfoPageState extends State<EmpProfileInfoPage>
           profileImageUrl =
               data['img']?.toString() ?? 'https://via.placeholder.com/150';
           name = data['name']?.toString() ?? 'Unknown Name';
-location = data['Address']?.toString() ?? 'Unknown Location'; 
-_locationController.text = location; 
+          location = data['Address']?.toString() ?? 'Unknown Location';
+          _locationController.text = location;
 // تحديث `TextEditingController`
- // تحديث الحقل عند تحميل البيانات
+          // تحديث الحقل عند تحميل البيانات
           rating = data['rating']?.toString() ?? '0.0';
           aboutMe = data['about']?.toString() ?? 'No description available.';
           _aboutMeController.text = aboutMe;
@@ -273,7 +273,6 @@ _locationController.text = location;
         await _firestore.collection('bestworker').doc(user.uid).update({
           'servNum': services.length.toString(),
         });
-        
 
         debugPrint('✅ servNum updated on data fetch: ${services.length}');
 
@@ -302,7 +301,8 @@ _locationController.text = location;
             'rating': reviewData['rating']?.toString() ?? '0.0',
             'date': reviewData['date']?.toString() ?? '',
             'review': reviewData['review']?.toString() ?? '',
-            'image': reviewData['image']?.toString() ??'https://via.placeholder.com/50',
+            'image': reviewData['image']?.toString() ??
+                'https://via.placeholder.com/50',
           };
         }).toList();
         isLoading = false;
@@ -313,26 +313,25 @@ _locationController.text = location;
     }
   }
 
-Future<void> _saveLocation() async {
-  try {
-    final User? user = _auth.currentUser;
-    if (user == null) return;
+  Future<void> _saveLocation() async {
+    try {
+      final User? user = _auth.currentUser;
+      if (user == null) return;
 
-    await _firestore.collection('users').doc(user.uid).set({
-  'Address': _locationController.text,
-}, SetOptions(merge: true)); // يمنع الكتابة فوق البيانات الأخرى
+      await _firestore.collection('users').doc(user.uid).set({
+        'Address': _locationController.text,
+      }, SetOptions(merge: true)); // يمنع الكتابة فوق البيانات الأخرى
 
+      setState(() {
+        location = _locationController.text;
+        _isEditing = false;
+      });
 
-    setState(() {
-      location = _locationController.text;
-      _isEditing = false;
-    });
-
-    debugPrint("Location updated successfully: $location");
-  } catch (e) {
-    debugPrint('Error saving location: $e');
+      debugPrint("Location updated successfully: $location");
+    } catch (e) {
+      debugPrint('Error saving location: $e');
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -342,7 +341,7 @@ Future<void> _saveLocation() async {
         title: Text(
           'Profile',
           style: GoogleFonts.montserratAlternates(
-            color: Theme.of(context).colorScheme.inversePrimary,
+            color: Theme.of(context).colorScheme.primary,
           ),
         ),
         backgroundColor: Theme.of(context).colorScheme.surface,
@@ -357,7 +356,7 @@ Future<void> _saveLocation() async {
             onPressed: () {
               if (_isEditing) {
                 _saveAboutMe();
-                    _saveLocation();
+                _saveLocation();
               } else {
                 setState(() {
                   _isEditing = true; // تفعيل وضع التعديل
@@ -403,24 +402,23 @@ Future<void> _saveLocation() async {
                           ),
                         ),
                         const SizedBox(height: 8),
-                       _isEditing
-    ? TextField(
-        controller: _locationController,
-        decoration: InputDecoration(
-          hintText: 'Enter your location',
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
-      )
-    : Text(
-        location,
-        style: GoogleFonts.montserratAlternates(
-          fontSize: 14,
-          color: Colors.grey,
-        ),
-      ),
-
+                        _isEditing
+                            ? TextField(
+                                controller: _locationController,
+                                decoration: InputDecoration(
+                                  hintText: 'Enter your location',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                              )
+                            : Text(
+                                location,
+                                style: GoogleFonts.montserratAlternates(
+                                  fontSize: 14,
+                                  color: Colors.grey,
+                                ),
+                              ),
                         Text(
                           '$rating ($reviewsNum reviews)',
                           style: GoogleFonts.montserratAlternates(

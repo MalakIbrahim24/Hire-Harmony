@@ -4,6 +4,7 @@ import 'package:hire_harmony/services/firestore_services.dart';
 import 'package:hire_harmony/utils/app_colors.dart';
 import 'package:hire_harmony/views/pages/customer/view_emp_profile_page.dart';
 import 'package:hire_harmony/views/pages/map_page.dart';
+import 'package:hire_harmony/views/pages/near_page.dart';
 
 class SearchAndFilter extends StatefulWidget {
   const SearchAndFilter({super.key});
@@ -23,6 +24,19 @@ class _SearchAndFilterState extends State<SearchAndFilter> {
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(100.0),
         child: AppBar(
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.filter),
+              onPressed: () {
+                 Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const NearestUsersPage(),
+                    ),
+                  );
+              }
+            )
+          ],
           automaticallyImplyLeading: false,
           backgroundColor: Theme.of(context).colorScheme.surface,
           elevation: 0,
@@ -99,6 +113,7 @@ class _SearchAndFilterState extends State<SearchAndFilter> {
                       ),
                     ),
                   ),
+                  
                 ],
               ),
             ),

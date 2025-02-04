@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hire_harmony/utils/app_colors.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 
 ThemeData lightMode = ThemeData(
@@ -13,7 +14,10 @@ ThemeData lightMode = ThemeData(
     inversePrimary: AppColors().navy2,
     tertiary:AppColors().grey, // لون النص على العناصر الثانوية
   ),
-  textTheme: TextTheme(
+    textTheme: GoogleFonts.montserratAlternatesTextTheme(), // ✅ ضبط الخط
+
+ /* textTheme: TextTheme(
+    
     displayLarge: TextStyle(
       color: AppColors().navy,
       fontSize: 32,
@@ -42,6 +46,7 @@ ThemeData lightMode = ThemeData(
       fontSize: 16,
     ),
   ),
+  */
   appBarTheme: AppBarTheme(
     backgroundColor: AppColors().white, // لون الخلفية للتطبيق
     titleTextStyle: TextStyle(
@@ -52,5 +57,24 @@ ThemeData lightMode = ThemeData(
     iconTheme: IconThemeData(
       color: AppColors().navy,
     ),
+
+
+
   ),
+  navigationBarTheme: NavigationBarThemeData(
+  backgroundColor: AppColors().white, // ✅ تأكد من الخلفية
+  indicatorColor: AppColors().orange, // ✅ لون المؤشر عند التحديد
+  labelTextStyle: MaterialStateProperty.resolveWith((states) {
+    if (states.contains(MaterialState.selected)) {
+      return GoogleFonts.montserratAlternates(
+        color: Colors.white, // ✅ اللون عند التحديد
+        fontWeight: FontWeight.bold,
+      );
+    }
+    return GoogleFonts.montserratAlternates(
+      color: AppColors().navy, // ✅ اللون عند عدم التحديد
+    );
+  }),
+),
+
 );
